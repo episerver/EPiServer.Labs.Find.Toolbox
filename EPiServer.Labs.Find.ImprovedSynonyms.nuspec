@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>EPiServer.Labs.Find.ImprovedSynonyms</id>
+        <version>1.0</version>
+        <title>EPiServer Find Improved Synonyms</title>
+        <authors>EPiServer AB</authors>
+        <owners>EPiServer</owners>
+        <licenseUrl>https://github.com/episerver/EPiServer.Labs.Find.ImprovedSynonyms/blob/master/LICENSE/</licenseUrl>
+        <projectUrl>https://github.com/episerver/EPiServer.Labs.Find.ImprovedSynonyms/</projectUrl>
+        <requireLicenseAcceptance>true</requireLicenseAcceptance>
+        <description>Improved synonyms for Episerver Find</description>
+        <copyright>Copyright EPiServer AB 2014</copyright>
+        <tags>EPiServer Search</tags>
+        <dependencies>
+            <dependency id="EPiServer.Find.Cms" version="[12.0.0,14.0)" />
+        </dependencies>
+    </metadata>
+  <files>
+    <file src="..\EPiServer.Labs.Find.ImprovedSynonyms\src\bin\release\EPiServer.Labs.Find.ImprovedSynonyms.dll" target="lib\net461\" />
+  </files>
+</package>
