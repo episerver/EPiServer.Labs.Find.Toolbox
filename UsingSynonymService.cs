@@ -67,6 +67,7 @@ namespace EPiServer.Find.Cms
                             var minShouldMatchQueryStringQuery = CreateQuery(allPhrases, currentQueryStringQuery, analyzer, minShouldMatch);
                             context.RequestBody.Query = minShouldMatchQueryStringQuery;
                         }
+
                     }
                 });
             }
@@ -113,9 +114,21 @@ namespace EPiServer.Find.Cms
         private static MinShouldMatchQueryStringQuery CreateQuery(HashSet<string> phrases, MultiFieldQueryStringQuery currentQueryStringQuery, string analyzer, string minShouldMatch)
         {
             string phrasesQuery = EscapeElasticSearchQuery(string.Join(" ", phrases.ToArray()));
-            var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(phrasesQuery);
+            var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(phrasesQuery);                               
+                        
+            minShouldMatchQuery.RawQuery = currentQueryStringQuery.RawQuery;
+            minShouldMatchQuery.AllowLeadingWildcard = currentQueryStringQuery.AllowLeadingWildcard;
+            minShouldMatchQuery.AnalyzeWildcard = currentQueryStringQuery.AnalyzeWildcard;
+            minShouldMatchQuery.Analyzer = currentQueryStringQuery.Analyzer;
+            minShouldMatchQuery.AutoGeneratePhraseQueries = currentQueryStringQuery.AutoGeneratePhraseQueries;
+            minShouldMatchQuery.Boost = currentQueryStringQuery.Boost;
+            minShouldMatchQuery.EnablePositionIncrements = currentQueryStringQuery.EnablePositionIncrements;
+            minShouldMatchQuery.FuzzyMinSim = currentQueryStringQuery.FuzzyMinSim;
+            minShouldMatchQuery.FuzzyPrefixLength = currentQueryStringQuery.FuzzyPrefixLength;
+            minShouldMatchQuery.LowercaseExpandedTerms = currentQueryStringQuery.LowercaseExpandedTerms;
+            minShouldMatchQuery.PhraseSlop = currentQueryStringQuery.PhraseSlop;
+            minShouldMatchQuery.DefaultField = currentQueryStringQuery.DefaultField;
             minShouldMatchQuery.Fields = currentQueryStringQuery.Fields;
-            minShouldMatchQuery.Analyzer = analyzer;            
 
             if (currentQueryStringQuery.DefaultOperator == BooleanOperator.And)
             {
@@ -123,7 +136,7 @@ namespace EPiServer.Find.Cms
                 minShouldMatchQuery.MinimumShouldMatch = minShouldMatch;  // A smarter sort of AND
             }
             else
-            { 
+            {
                 minShouldMatchQuery.DefaultOperator = BooleanOperator.Or; // Allow for OR if there is a need                
             }
 
