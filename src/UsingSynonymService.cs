@@ -44,14 +44,13 @@ namespace EPiServer.Find.Cms
                             return;
                         }
 
-                        var analyzer = GetAnalyzer(currentQueryStringQuery);
-                        var synonymDictionary = _synonymLoader.GetSynonyms();
-
                         var queryPhrases = GetQueryPhrases(query).Take(50).ToArray();                               // Collect all phrases in user query. Max 50 phrases.
                         if (queryPhrases.Count() == 0)
                         {
                             return;
                         }
+
+                        var synonymDictionary = _synonymLoader.GetSynonyms();
 
                         var phraseVariations = GetPhraseVariations(queryPhrases);                                   // 'Alloy tech' now would result in Alloy, 'Alloy tech', 'Alloy tech now', tech, 'tech now' and so on                        
                         var phrasesToExpand = GetPhrasesToExpand(phraseVariations, synonymDictionary);              // Return all phrases with expanded synonyms                        
@@ -64,7 +63,7 @@ namespace EPiServer.Find.Cms
                         {
                             // If there are only synonym expansions be less strict on required matches
                             string minShouldMatch = nonExpandedPhrases.Count() == 0 && expandedPhrases.Count() > 0 ? "1<40%" : "2<60%";
-                            var minShouldMatchQueryStringQuery = CreateQuery(allPhrases, currentQueryStringQuery, analyzer, minShouldMatch);
+                            var minShouldMatchQueryStringQuery = CreateQuery(allPhrases, currentQueryStringQuery, minShouldMatch);
                             context.RequestBody.Query = minShouldMatchQueryStringQuery;
                         }
 
@@ -101,21 +100,11 @@ namespace EPiServer.Find.Cms
             return (currentQueryStringQuery.Query ?? string.Empty).ToString();
         }
 
-        /// <summary>
-        /// Get analyzer for given QueryStringQuery
-        /// </summary>
-        /// <param name="currentQueryStringQuery"></param>
-        /// <returns></returns>
-        private string GetAnalyzer(MultiFieldQueryStringQuery currentQueryStringQuery)
-        {
-            return currentQueryStringQuery.Analyzer;
-        }
-
-        private static MinShouldMatchQueryStringQuery CreateQuery(HashSet<string> phrases, MultiFieldQueryStringQuery currentQueryStringQuery, string analyzer, string minShouldMatch)
+        private static MinShouldMatchQueryStringQuery CreateQuery(HashSet<string> phrases, MultiFieldQueryStringQuery currentQueryStringQuery, string minShouldMatch)
         {
             string phrasesQuery = EscapeElasticSearchQuery(string.Join(" ", phrases.ToArray()));
-            var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(phrasesQuery);                               
-                        
+            var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(phrasesQuery);
+
             minShouldMatchQuery.RawQuery = currentQueryStringQuery.RawQuery;
             minShouldMatchQuery.AllowLeadingWildcard = currentQueryStringQuery.AllowLeadingWildcard;
             minShouldMatchQuery.AnalyzeWildcard = currentQueryStringQuery.AnalyzeWildcard;
