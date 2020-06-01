@@ -65,16 +65,16 @@ namespace EPiServer.Find.Cms
                         var nonExpandedPhrases = GetPhrasesNotToExpand(queryPhrases, phrasesToExpand);              // Return all phrases that didn't get expanded
                         var expandedPhrases = ExpandPhrases(phrasesToExpand, synonymDictionary);                    // Expand phrases                                
                         var allPhrases = new HashSet<string>(nonExpandedPhrases.Union(expandedPhrases));            // Merge nonExpandedPhrases and expandedPhrases
-                        
+
 
                         // Add query for all phrases
                         if (allPhrases.Count() > 0)
                         {
-                            // If there are only synonym expansions be less strict on required matches
+                            // If there are only synonym expansions be less strict on required matches                                        
                             string minShouldMatchFinal = nonExpandedPhrases.Count() == 0 && expandedPhrases.Count() > 0 ? "1<40%" : minShouldMatch;
-                            var minShouldMatchQueryStringQuery = CreateQuery(allPhrases, currentQueryStringQuery, minShouldMatchFinal);
+                            var minShouldMatchQueryStringQuery = CreateQuery(allPhrases, currentQueryStringQuery, minShouldMatch.IsNotNullOrEmpty() ? minShouldMatchFinal : "");
                             context.RequestBody.Query = minShouldMatchQueryStringQuery;
-                        }                        
+                        }
 
                     }
                 });
@@ -147,7 +147,6 @@ namespace EPiServer.Find.Cms
             }
             else
             {
-                minShouldMatchQuery.MinimumShouldMatch = "";
                 minShouldMatchQuery.DefaultOperator = currentQueryStringQuery.DefaultOperator;
             }
 
@@ -236,11 +235,11 @@ namespace EPiServer.Find.Cms
                 //Insert AND in between terms if not quoted. Quoted not yet allowed by the Find UI though.
                 if (!IsStringQuoted(synonym))
                 {
-                    expandedPhrases.Add(string.Format("(({0}) ({1}))", phrase, synonym.Replace(" ", string.Format(" {0} ", "AND"))));
+                    expandedPhrases.Add(string.Format("(({0}) OR ({1}))", phrase, synonym.Replace(" ", string.Format(" {0} ", "AND"))));
                 }
                 else
                 {
-                    expandedPhrases.Add(string.Format("(({0}) ({1}))", phrase, synonym));
+                    expandedPhrases.Add(string.Format("(({0}) OR ({1}))", phrase, synonym));
                 }
 
             }

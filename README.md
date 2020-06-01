@@ -21,6 +21,10 @@ With MinimumShouldMatch it's possible to set or or more conditions for how many 
 If you specify 2<60% all terms up to 2 terms will be required to match. More than 2 terms 60% of the terms are required to match.
 Queries with only synonym expansions are always given a minimumShouldMatch of 1>40%.
 
+Note!
+* There will always be an OR relationship between the synonym match and the expanded synonym regardless if you use AND.
+* There will always be an AND relationship between terms of the phrase in the synonym match and the expanded synonym regardless if you use OR.
+
 [MinimumShouldMatch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html)
 
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
