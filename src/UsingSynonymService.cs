@@ -44,28 +44,37 @@ namespace EPiServer.Find.Cms
                             return;
                         }
 
+                        // If MinimumShouldMatch has been set previously pick up the minShouldMatch value
+                        MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery;
+                        string minShouldMatch = "";
+                        if (TryGetMinShouldMatchQueryStringQuery(context.RequestBody.Query, search, out currentMinShouldMatchQueryStringQuery))
+                        {
+                            minShouldMatch = currentMinShouldMatchQueryStringQuery.MinimumShouldMatch;
+                        }
+
+                        var synonymDictionary = _synonymLoader.GetSynonyms();
+
                         var queryPhrases = GetQueryPhrases(query).Take(50).ToArray();                               // Collect all phrases in user query. Max 50 phrases.
                         if (queryPhrases.Count() == 0)
                         {
                             return;
                         }
 
-                        var synonymDictionary = _synonymLoader.GetSynonyms();
-
-                        var phraseVariations = GetPhraseVariations(queryPhrases);                                   // 'Alloy tech' now would result in Alloy, 'Alloy tech', 'Alloy tech now', tech, 'tech now' and so on                        
+                        var phraseVariations = GetPhraseVariations(queryPhrases);                                   // 'Alloy tech now' would result in Alloy, 'Alloy tech', 'Alloy tech now', tech, 'tech now' and now
                         var phrasesToExpand = GetPhrasesToExpand(phraseVariations, synonymDictionary);              // Return all phrases with expanded synonyms                        
                         var nonExpandedPhrases = GetPhrasesNotToExpand(queryPhrases, phrasesToExpand);              // Return all phrases that didn't get expanded
-                        var expandedPhrases = ExpandPhrases(phrasesToExpand, synonymDictionary);                    // Expand phrases        
+                        var expandedPhrases = ExpandPhrases(phrasesToExpand, synonymDictionary);                    // Expand phrases                                
                         var allPhrases = new HashSet<string>(nonExpandedPhrases.Union(expandedPhrases));            // Merge nonExpandedPhrases and expandedPhrases
+                        
 
-                        // Add query for phrases
+                        // Add query for all phrases
                         if (allPhrases.Count() > 0)
                         {
                             // If there are only synonym expansions be less strict on required matches
-                            string minShouldMatch = nonExpandedPhrases.Count() == 0 && expandedPhrases.Count() > 0 ? "1<40%" : "2<60%";
-                            var minShouldMatchQueryStringQuery = CreateQuery(allPhrases, currentQueryStringQuery, minShouldMatch);
+                            string minShouldMatchFinal = nonExpandedPhrases.Count() == 0 && expandedPhrases.Count() > 0 ? "1<40%" : minShouldMatch;
+                            var minShouldMatchQueryStringQuery = CreateQuery(allPhrases, currentQueryStringQuery, minShouldMatchFinal);
                             context.RequestBody.Query = minShouldMatchQueryStringQuery;
-                        }
+                        }                        
 
                     }
                 });
@@ -75,6 +84,17 @@ namespace EPiServer.Find.Cms
                 Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "Your index does not support synonyms. Please contact support to have your account upgraded. Falling back to search without synonyms.") { IsError = false });
                 return new Search<TSource, QueryStringQuery>(search, context => { });
             }
+        }
+
+        private bool TryGetMinShouldMatchQueryStringQuery<TSource>(IQuery query, IQueriedSearch<TSource> search, out MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery)
+        {
+            currentMinShouldMatchQueryStringQuery = query as MinShouldMatchQueryStringQuery;
+            if (currentMinShouldMatchQueryStringQuery == null)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private bool TryGetQueryStringQuery<TSource>(IQuery query, IQueriedSearch<TSource> search, out MultiFieldQueryStringQuery currentQueryStringQuery)
@@ -119,14 +139,16 @@ namespace EPiServer.Find.Cms
             minShouldMatchQuery.DefaultField = currentQueryStringQuery.DefaultField;
             minShouldMatchQuery.Fields = currentQueryStringQuery.Fields;
 
-            if (currentQueryStringQuery.DefaultOperator == BooleanOperator.And)
+            // MinimumShouldMatch() overrides WithAndAsDefaultOperator()
+            if (minShouldMatch.IsNotNullOrEmpty())
             {
+                minShouldMatchQuery.MinimumShouldMatch = minShouldMatch;
                 minShouldMatchQuery.DefaultOperator = BooleanOperator.Or;
-                minShouldMatchQuery.MinimumShouldMatch = minShouldMatch;  // A smarter sort of AND
             }
             else
             {
-                minShouldMatchQuery.DefaultOperator = BooleanOperator.Or; // Allow for OR if there is a need                
+                minShouldMatchQuery.MinimumShouldMatch = "";
+                minShouldMatchQuery.DefaultOperator = currentQueryStringQuery.DefaultOperator;
             }
 
             return minShouldMatchQuery;
