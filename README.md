@@ -20,7 +20,8 @@ ImprovedSynonyms also comes with support for Elastic Search's MinimumShouldMatch
 With MinimumShouldMatch it's possible to set or or more conditions for how many terms (in percentage and absolutes) should match.
 If you specify 2<60% all terms up to 2 terms will be required to match. More than 2 terms 60% of the terms are required to match.
 Queries with only synonym expansions are always given a minimumShouldMatch of 1>40%.
-[![MinimumShouldMatch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html)]
+
+[MinimumShouldMatch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html)
 
 [![License](http://img.shields.io/:license-apache-blue.svg?style=flat-square)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
@@ -54,18 +55,20 @@ See also the general [Episerver system requirements](https://world.episerver.com
 
 4. It could look like this
 
+    ```csharp
     UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
                                     .For(query)             
                                     .MinimumShouldMatch("2<60%")
                                     .UsingSynonymsImproved()                                         
                                     .GetResult();
-
+    ```
     or like this
-
+    ```csharp
     UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
                                     .For(query)             
                                     .MinimumShouldMatch("2")
                                     .UsingSynonymsImproved()                                         
                                     .GetResult();
-4. Evaluate!
+    ```
+4. Enjoy!
 
