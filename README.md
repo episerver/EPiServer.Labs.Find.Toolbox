@@ -9,6 +9,7 @@ ImprovedSynonyms solves limitations in the following scenarios:
 * Multiple term synonyms within quotes
 * Multiple term synonyms requires all terms to match
 * Does not rely on an synonym index to be up to date
+* No unwanted built-in synonyms
 
 This is solved by downloading and caching the synonym list, and when the query comes in
 we expand the matching synonyms on the query, on the client side.
