@@ -23,7 +23,7 @@ namespace EPiServer.Find.Cms
             _synonymLoader = synonymLoader;
         }
 
-        public IQueriedSearch<TSource, QueryStringQuery> UsingSynonyms<TSource>(IQueriedSearch<TSource> search)
+        public IQueriedSearch<TSource, QueryStringQuery> UsingSynonyms<TSource>(IQueriedSearch<TSource> search, TimeSpan? cacheDuration = null)
         {
 
             if (search.Client.Settings.Admin)
@@ -52,7 +52,7 @@ namespace EPiServer.Find.Cms
                             minShouldMatch = currentMinShouldMatchQueryStringQuery.MinimumShouldMatch;
                         }
 
-                        var synonymDictionary = _synonymLoader.GetSynonyms();
+                        var synonymDictionary = _synonymLoader.GetSynonyms(cacheDuration);
 
                         var queryPhrases = GetQueryPhrases(query).Take(50).ToArray();                               // Collect all phrases in user query. Max 50 phrases.
                         if (queryPhrases.Count() == 0)

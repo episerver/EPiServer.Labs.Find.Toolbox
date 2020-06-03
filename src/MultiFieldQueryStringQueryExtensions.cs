@@ -9,14 +9,14 @@ namespace EPiServer.Find.Cms
     {
         private static Lazy<UsingSynonymService> _lazyUsingSynonymService = new Lazy<UsingSynonymService>(() => ServiceLocator.Current.GetInstance<UsingSynonymService>());
 
-        public static IQueriedSearch<TSource, QueryStringQuery> UsingSynonymsImproved<TSource>(this IQueriedSearch<TSource> search)
+        public static IQueriedSearch<TSource, QueryStringQuery> UsingSynonymsImproved<TSource>(this IQueriedSearch<TSource> search, TimeSpan? cacheDuration = null)
         {
-            return UsingSynonymsImproved(search, _lazyUsingSynonymService.Value);
+            return UsingSynonymsImproved(search, _lazyUsingSynonymService.Value, cacheDuration);
         }
 
-        public static IQueriedSearch<TSource, QueryStringQuery> UsingSynonymsImproved<TSource>(this IQueriedSearch<TSource> search, UsingSynonymService usingSynonymService)
+        public static IQueriedSearch<TSource, QueryStringQuery> UsingSynonymsImproved<TSource>(this IQueriedSearch<TSource> search, UsingSynonymService usingSynonymService, TimeSpan? cacheDuration = null)
         {
-            return usingSynonymService.UsingSynonyms(search);
+            return usingSynonymService.UsingSynonyms(search, cacheDuration);
         }
 
         public static IQueriedSearch<TSource, MinShouldMatchQueryStringQuery> MinimumShouldMatch<TSource>(this IQueriedSearch<TSource> search, string minMatch)

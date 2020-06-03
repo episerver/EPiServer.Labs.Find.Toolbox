@@ -56,7 +56,8 @@ See also the general [Episerver system requirements](https://world.episerver.com
 2. Add .WithAndAsDefaultOperator if you want but we recommend .MinimumShouldMatch(). Not specifying either will allow for OR as the default operator.
    Using MinimumShouldMatch() will preced any use of .WithAndAsDefaultOperator() or the default OR.
 
-3. Add .UsingSynonymsImproved()
+3. Add .UsingSynonymsImproved([cacheDuration])
+   The cache duration parameter defaults to 1 hour but could be set to something shorter during testing.
 
 4. It could look like this
 

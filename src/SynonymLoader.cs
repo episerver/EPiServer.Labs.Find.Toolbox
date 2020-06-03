@@ -22,9 +22,9 @@ namespace EPiServer.Find.Cms
             _statisticTagsHelper = statisticTagsHelper;
         }
 
-        public Dictionary<String, HashSet<String>> GetSynonyms()
+        public Dictionary<String, HashSet<String>> GetSynonyms(TimeSpan? cacheDuration = null)
         {
-            return GetSynonyms(100, new RuntimeCacheAdapter(), new StaticCachePolicy(TimeSpan.FromHours(1)));
+            return GetSynonyms(100, new RuntimeCacheAdapter(), new StaticCachePolicy((cacheDuration == null ? TimeSpan.FromHours(1) : (TimeSpan)cacheDuration)));
         }
 
         public Dictionary<String, HashSet<String>> GetSynonyms(int synonymBatchSize, RuntimeCacheAdapter cache, StaticCachePolicy staticCachePolicy)
@@ -57,7 +57,7 @@ namespace EPiServer.Find.Cms
 
         private string GetSynonymCacheKey(IEnumerable<string> statisticLanguageTags)
         {
-            return "FindSynonymList_" + statisticLanguageTags.ToString();
+            return string.Format("FindSynonymList_" + string.Join(",", statisticLanguageTags));
         }
 
         private bool TryGetCachedSynonym(string synonymCacheKey, RuntimeCacheAdapter cache, out Dictionary<String, HashSet<String>> synonymsCached)
