@@ -64,7 +64,7 @@ namespace EPiServer.Find.Cms
         {
 
             synonymsCached = cache.Get<Dictionary<String, HashSet<String>>>(synonymCacheKey);
-            if (synonymsCached == null || !synonymsCached.Any())
+            if (synonymsCached == null)
             {
                 return false;
             }
