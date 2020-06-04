@@ -54,7 +54,7 @@ namespace EPiServer.Find.Cms
 
                         var synonymDictionary = _synonymLoader.GetSynonyms(cacheDuration);
 
-                        var queryPhrases = GetQueryPhrases(query).Take(50).ToArray();                               // Collect all phrases in user query. Max 50 phrases.
+                        var queryPhrases = GetQueryPhrases(query).Except(new string[] { "AND", "OR" }).Take(50).ToArray();     // Collect all phrases in user query. Max 50 phrases. Skip AND/OR.                     
                         if (queryPhrases.Count() == 0)
                         {
                             return;
@@ -198,9 +198,9 @@ namespace EPiServer.Find.Cms
         }
 
         // Get phrase variations that should get expanded (that match synonyms)
-        private static HashSet<string> GetPhrasesToExpand(HashSet<string> termVariations, Dictionary<String, HashSet<String>> synonymDictionary)
+        private static HashSet<string> GetPhrasesToExpand(HashSet<string> phraseVariations, Dictionary<String, HashSet<String>> synonymDictionary)
         {
-            return new HashSet<string>(termVariations.Intersect(synonymDictionary.Keys));
+            return new HashSet<string>(phraseVariations.Intersect(synonymDictionary.Keys));
         }
 
         // Return phrases with their expanded synonym
@@ -209,9 +209,8 @@ namespace EPiServer.Find.Cms
             HashSet<string> queryList = new HashSet<string>();
 
             foreach (var match in phrasesToExpand)
-            {
-                string expPhrase = ExpandPhrase(match, synonymDictionary[match]);
-                queryList.Add(expPhrase);
+            {                
+                queryList.Add(ExpandPhrase(match, synonymDictionary[match]));
             }
 
             return queryList;
