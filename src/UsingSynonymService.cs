@@ -157,10 +157,7 @@ namespace EPiServer.Find.Cms
         private static string[] GetQueryPhrases(string query)
         {
             // Replace double space, tabs with single whitespace and trim space on side
-            string cleanedQuery = Regex.Replace(UnescapeElasticSearchQuery(query), @"\s+", " ").Trim();
-
-            // Clean diactrics
-            cleanedQuery = CleanDiactrics(cleanedQuery);
+            string cleanedQuery = Regex.Replace(UnescapeElasticSearchQuery(query), @"\s+", " ").Trim();            
 
             // Match single terms and quoted terms, allow hyphens and ´'` in terms, allow space between quotes and word.
             return Regex.Matches(cleanedQuery, @"([\w-]+)|([""][\s\w-´'`]+[""])").Cast<Match>().Select(c => c.Value.Trim()).ToArray();
@@ -266,14 +263,5 @@ namespace EPiServer.Find.Cms
             return s.Replace("-", "\\-");
         }
 
-        private static string CleanDiactrics(string text)
-        {
-            string decomposed = text.Normalize(NormalizationForm.FormD);
-            char[] filtered = decomposed
-                .Where(c => char.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
-                .ToArray();
-
-            return new String(filtered);
-        }
     }
 }

@@ -86,9 +86,6 @@
     <Reference Include="EPiServer.ImageLibrary, Version=9.5.0.0, Culture=neutral, PublicKeyToken=8fe83dea738b45b7, processorArchitecture=MSIL">
       <HintPath>..\packages\EPiServer.CMS.Core.9.5.0\lib\net45\EPiServer.ImageLibrary.dll</HintPath>
     </Reference>
-    <Reference Include="EPiServer.Labs.Find.ImprovedSynonyms, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\EPiServer.Labs.Find.ImprovedSynonyms.1.0.2\lib\net461\EPiServer.Labs.Find.ImprovedSynonyms.dll</HintPath>
-    </Reference>
     <Reference Include="EPiServer.Licensing, Version=9.5.0.0, Culture=neutral, PublicKeyToken=8fe83dea738b45b7, processorArchitecture=MSIL">
       <HintPath>..\packages\EPiServer.Framework.9.5.0\lib\net45\EPiServer.Licensing.dll</HintPath>
     </Reference>
