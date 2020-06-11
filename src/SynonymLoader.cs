@@ -117,45 +117,33 @@ namespace EPiServer.Find.Cms
             var synonymsFlattened = new Dictionary<string, HashSet<string>>();
             foreach (var synonym in loadedSynonyms)
             {
-
-                // Multiple phrases synonym 
+                
                 var multiplePhrases = synonym.Phrase.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim());
-                if (multiplePhrases.Count() > 1)
+               
+                foreach (var singlePhrase in multiplePhrases)
                 {
-                    foreach (var newPhrase in multiplePhrases)
+                    AddSynonym(singlePhrase, synonym.SynonymPhrase, ref synonymsFlattened);
+
+                    // If multiple terms, add a new pair as a quoted phrase
+                    if (ContainsMultipleTerms(singlePhrase))
                     {
-                        AddSynonym(newPhrase, synonym.SynonymPhrase, ref synonymsFlattened);
+                        AddSynonym(string.Format("\"{0}\"", singlePhrase), synonym.SynonymPhrase, ref synonymsFlattened);
+                    }
+
+                    // Birectional synonym, add a new pair reversed 
+                    if (synonym.Bidirectional)
+                    {
+                        AddSynonym(synonym.SynonymPhrase, singlePhrase, ref synonymsFlattened);
 
                         // If multiple terms, add a new pair as a quoted phrase
                         if (ContainsMultipleTerms(synonym.SynonymPhrase))
                         {
-                            AddSynonym(string.Format("\"{0}\"", newPhrase), synonym.SynonymPhrase, ref synonymsFlattened);
+                            AddSynonym(string.Format("\"{0}\"", synonym.SynonymPhrase), singlePhrase, ref synonymsFlattened);
                         }
                     }
-                }
-                // Single phrase synonym
-                else
-                {
-                    AddSynonym(synonym.Phrase, synonym.SynonymPhrase, ref synonymsFlattened);
 
-                    // If multiple terms, add a new pair as a quoted phrase
-                    if (ContainsMultipleTerms(synonym.Phrase))
-                    {
-                        AddSynonym(string.Format("\"{0}\"", synonym.Phrase), synonym.SynonymPhrase, ref synonymsFlattened);
-                    }
                 }
-
-                // Birectional synonym 
-                if (synonym.Bidirectional)
-                {
-                    AddSynonym(synonym.SynonymPhrase, synonym.Phrase, ref synonymsFlattened);
-
-                    // If multiple terms, add a new pair as a quoted phrase
-                    if (ContainsMultipleTerms(synonym.SynonymPhrase))
-                    {
-                        AddSynonym(string.Format("\"{0}\"", synonym.SynonymPhrase), synonym.Phrase, ref synonymsFlattened);
-                    }
-                }
+           
             }
 
             return synonymsFlattened;
