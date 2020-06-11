@@ -228,19 +228,20 @@ namespace EPiServer.Find.Cms
 
             foreach (var synonym in synonyms)
             {
+                
                 //Insert AND in between terms if not quoted. Quoted not yet allowed by the Find UI though.
                 if (!IsStringQuoted(synonym))
                 {
-                    expandedPhrases.Add(string.Format("(({0}) OR ({1}))", phrase, synonym.Replace(" ", string.Format(" {0} ", "AND"))));
+                    expandedPhrases.Add(string.Format("({0}) OR ({1})", phrase, synonym.Replace(" ", string.Format(" {0} ", "AND"))));
                 }
                 else
                 {
-                    expandedPhrases.Add(string.Format("(({0}) OR ({1}))", phrase, synonym));
+                    expandedPhrases.Add(string.Format("({0}) OR ({1})", phrase, synonym));
                 }
 
             }
 
-            return string.Join(" ", expandedPhrases);
+            return string.Format("({0})",string.Join(" OR ", expandedPhrases));
         }
 
         private static bool IsStringQuoted(string text)
