@@ -6,6 +6,7 @@ Currently the synonym expansion is done in backend (Elastic Search) and relies o
 ImprovedSynonyms solves limitations in the following scenarios:
 * Missing or unexplainable hits when using .WithAndAsDefaultOperator()
 * Multiple term synonyms
+* Multiple term synonyms bidirectional
 * Multiple term synonyms within quotes
 * Multiple term synonyms requires all terms to match
 * Does not rely on an synonym index to be up to date
@@ -49,7 +50,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
 
 ## Installation
 
-1. Copy all files into your project
+1. Copy all files into your project or install NuGet package
 
 2. Remove any use of .UsingSynonyms()
 
@@ -61,20 +62,41 @@ See also the general [Episerver system requirements](https://world.episerver.com
 
 4. It could look like this
 
+
     ```csharp
+    // With MinimumShouldMatch() with conditions
     UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
                                     .For(query)             
                                     .MinimumShouldMatch("2<60%")
                                     .UsingSynonymsImproved()                                         
                                     .GetResult();
     ```
-    or like this
+    
     ```csharp
+    // With MinimumShouldMatch() absolutes    
     UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
                                     .For(query)             
                                     .MinimumShouldMatch("2")
                                     .UsingSynonymsImproved()                                         
                                     .GetResult();
     ```
+    
+    ```csharp
+    // With WithAndAsDefaultOperator() 
+    UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
+                                    .For(query)             
+                                    .WithAndAsDefaultOperator()
+                                    .UsingSynonymsImproved()                                         
+                                    .GetResult();
+    ```
+
+    ```csharp
+    // Without WithAndAsDefaultOperator() which is the default behaviour which sets the default operator to OR
+    UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
+                                    .For(query)                 
+                                    .UsingSynonymsImproved()                                         
+                                    .GetResult();
+    ```
+
 4. Enjoy!
 
