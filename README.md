@@ -52,16 +52,20 @@ See also the general [Episerver system requirements](https://world.episerver.com
 
 1. Copy all files into your project or install NuGet package
 
-2. Remove any use of .UsingSynonyms()
+2. Make sure you use 
 
-2. Add .WithAndAsDefaultOperator if you want but we recommend .MinimumShouldMatch(). Not specifying either will allow for OR as the default operator.
+   ```csharp
+   using EPiServer.Find.Cms;
+   ``` 
+3. Remove any use of .UsingSynonyms()
+
+4. Add .WithAndAsDefaultOperator if you want but we recommend .MinimumShouldMatch(). Not specifying either will allow for OR as the default operator.
    Using MinimumShouldMatch() will preced any use of .WithAndAsDefaultOperator() or the default OR.
 
-3. Add .UsingSynonymsImproved([cacheDuration])
+5. Add .UsingSynonymsImproved([cacheDuration])
    The cache duration parameter defaults to 1 hour but could be set to something shorter during testing.
 
-4. It could look like this
-
+6. It could look like this
 
     ```csharp
     // With MinimumShouldMatch() with conditions
@@ -98,5 +102,5 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .GetResult();
     ```
 
-4. Enjoy!
+7. Enjoy!
 
