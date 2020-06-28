@@ -43,6 +43,7 @@ Note!
 ## System requirements
 
 * Find 12 or higher
+* .NET Framework 4.6.1 or higher
 
 See also the general [Episerver system requirements](https://world.episerver.com/documentation/system-requirements/) on Episerver World.
 
