@@ -12,7 +12,7 @@ ImprovedSynonyms solves limitations in the following scenarios:
 * Does not rely on an synonym index to be up to date
 * No unwanted built-in synonyms
 
-This is solved by downloading and caching the synonym list, and when the query comes in
+This is solved by retrieving and caching the synonym list, and when the query comes in
 we expand the matching synonyms on the query, on the client side.
 
 Searching for 'episerver find' where find is a synonym for 'search & navigation"
@@ -21,10 +21,9 @@ will result in 'episerver (find OR (search & navigation))'
 ImprovedSynonyms also comes with support for Elastic Search's MinimumShouldMatch. 
 With MinimumShouldMatch it's possible to set or or more conditions for how many terms (in percentage and absolutes) should match.
 If you specify 2<60% all terms up to 2 terms will be required to match. More than 2 terms 60% of the terms are required to match.
-Queries with only synonym expansions are always given a minimumShouldMatch of 1>40%.
 
 Note!
-* There will always be an OR relationship between the synonym match and the expanded synonym regardless if you use AND.
+* There will always be an OR relationship between the synonym match and the expanded synonym regardless if you use WithAndAsDefaultOperator() or MinimumShouldMatch().
 * There will always be an AND relationship between terms of the phrase in the synonym match and the expanded synonym regardless if you use OR.
 
 [MinimumShouldMatch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html)

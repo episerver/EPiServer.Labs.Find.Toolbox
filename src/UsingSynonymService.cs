@@ -1,6 +1,7 @@
 ﻿using EPiServer.Find;
 using EPiServer.Find.Api.Querying;
 using EPiServer.Find.Api.Querying.Queries;
+using EPiServer.Find.Helpers;
 using EPiServer.Find.Helpers.Text;
 using EPiServer.Find.Tracing;
 using EPiServer.ServiceLocation;
@@ -63,18 +64,42 @@ namespace EPiServer.Find.Cms
                         var phraseVariations = GetPhraseVariations(queryPhrases);                                   // 'Alloy tech now' would result in Alloy, 'Alloy tech', 'Alloy tech now', tech, 'tech now' and now
                         var phrasesToExpand = GetPhrasesToExpand(phraseVariations, synonymDictionary);              // Return all phrases with expanded synonyms                        
                         var nonExpandedPhrases = GetPhrasesNotToExpand(queryPhrases, phrasesToExpand);              // Return all phrases that didn't get expanded
-                        var expandedPhrases = ExpandPhrases(phrasesToExpand, synonymDictionary);                    // Expand phrases                                
-                        var allPhrases = new HashSet<string>(nonExpandedPhrases.Union(expandedPhrases));            // Merge nonExpandedPhrases and expandedPhrases
+                        var expandedPhrases = ExpandPhrases(phrasesToExpand, synonymDictionary);                    // Expand phrases                                                        
 
+                        var boolQuery = new MinShouldMatchBoolQuery();
 
-                        // Add query for all phrases
-                        if (allPhrases.Count() > 0)
-                        {
-                            // If there are only synonym expansions be less strict on required matches                                        
-                            string minShouldMatchFinal = nonExpandedPhrases.Count() == 0 && expandedPhrases.Count() > 0 ? "1<40%" : minShouldMatch;
-                            var minShouldMatchQueryStringQuery = CreateQuery(allPhrases, currentQueryStringQuery, minShouldMatch.IsNotNullOrEmpty() ? minShouldMatchFinal : "");
-                            context.RequestBody.Query = minShouldMatchQueryStringQuery;
+                        // Add query for non expanded phrases
+                        foreach (var nonExpandedPhrase in nonExpandedPhrases)
+                        {                            
+                            var minShouldMatchQueryStringQuery = CreateQuery(nonExpandedPhrase, currentQueryStringQuery, "");                            
+                            boolQuery.Should.Add(minShouldMatchQueryStringQuery);
                         }
+
+                        // Add query for expanded phrases
+                        foreach (var expandedPhrase in expandedPhrases)
+                        { 
+                            // Expanded phrases only requires one term to match
+                            var minShouldMatchQueryStringQuery = CreateQuery(expandedPhrase, currentQueryStringQuery, "1");
+                            boolQuery.Should.Add(minShouldMatchQueryStringQuery);                            
+                        }
+                        
+                        if (boolQuery.IsNull())
+                        {
+                            return;
+                        }
+
+                        // MinimumShouldMatch() overrides WithAndAsDefaultOperator()
+                        if (minShouldMatch.IsNotNullOrEmpty())
+                        {
+                            boolQuery.MinimumShouldMatch = minShouldMatch;
+                        }
+                        // Emulate WithAndAsDefaultOperator() using MinimumShouldMatch set to 100%
+                        else if (currentQueryStringQuery.DefaultOperator == BooleanOperator.And)
+                        {
+                            boolQuery.MinimumShouldMatch = "100%";
+                        }
+                         
+                        context.RequestBody.Query = boolQuery;
 
                     }
                 });
@@ -120,9 +145,9 @@ namespace EPiServer.Find.Cms
             return (currentQueryStringQuery.Query ?? string.Empty).ToString();
         }
 
-        private static MinShouldMatchQueryStringQuery CreateQuery(HashSet<string> phrases, MultiFieldQueryStringQuery currentQueryStringQuery, string minShouldMatch)
+        private static MinShouldMatchQueryStringQuery CreateQuery(string phrase, MultiFieldQueryStringQuery currentQueryStringQuery, string minShouldMatch)
         {
-            string phrasesQuery = EscapeElasticSearchQuery(string.Join(" ", phrases.ToArray()));
+            string phrasesQuery = EscapeElasticSearchQuery(phrase);
             var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(phrasesQuery);
 
             minShouldMatchQuery.RawQuery = currentQueryStringQuery.RawQuery;
@@ -139,16 +164,8 @@ namespace EPiServer.Find.Cms
             minShouldMatchQuery.DefaultField = currentQueryStringQuery.DefaultField;
             minShouldMatchQuery.Fields = currentQueryStringQuery.Fields;
 
-            // MinimumShouldMatch() overrides WithAndAsDefaultOperator()
-            if (minShouldMatch.IsNotNullOrEmpty())
-            {
-                minShouldMatchQuery.MinimumShouldMatch = minShouldMatch;
-                minShouldMatchQuery.DefaultOperator = BooleanOperator.Or;
-            }
-            else
-            {
-                minShouldMatchQuery.DefaultOperator = currentQueryStringQuery.DefaultOperator;
-            }
+            minShouldMatchQuery.MinimumShouldMatch = minShouldMatch;
+            minShouldMatchQuery.DefaultOperator = BooleanOperator.Or;            
 
             return minShouldMatchQuery;
         }

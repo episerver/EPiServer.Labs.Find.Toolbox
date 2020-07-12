@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
         <id>EPiServer.Labs.Find.ImprovedSynonyms</id>
-        <version>1.0.6</version>
+        <version>1.0.7</version>
         <title>EPiServer Find Improved Synonyms</title>
         <authors>EPiServer AB</authors>
         <owners>EPiServer</owners>
@@ -10,7 +10,7 @@
         <projectUrl>https://github.com/episerver/EPiServer.Labs.Find.ImprovedSynonyms/</projectUrl>
         <requireLicenseAcceptance>true</requireLicenseAcceptance>
         <description>Improved synonyms for Episerver Find</description>
-        <copyright>Copyright EPiServer AB 2014</copyright>
+        <copyright>Copyright EPiServer AB 2020</copyright>
         <tags>EPiServer Search</tags>
         <dependencies>
             <dependency id="EPiServer.Find.Cms" version="[12.0.0,14.0)" />

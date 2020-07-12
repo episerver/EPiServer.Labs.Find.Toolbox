@@ -19,6 +19,8 @@ namespace EPiServer.Find.Cms
             return usingSynonymService.UsingSynonyms(search, cacheDuration);
         }
 
+
+
         public static IQueriedSearch<TSource, MinShouldMatchQueryStringQuery> MinimumShouldMatch<TSource>(this IQueriedSearch<TSource> search, string minMatch)
         {
             return new Search<TSource, MinShouldMatchQueryStringQuery>(search, context =>
