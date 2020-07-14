@@ -19,7 +19,7 @@ Searching for 'episerver find' where find is a synonym for 'search & navigation"
 will result in 'episerver (find OR (search & navigation))'
 
 ImprovedSynonyms also comes with support for Elastic Search's MinimumShouldMatch. 
-With MinimumShouldMatch it's possible to set or or more conditions for how many terms (in percentage and absolutes) should match.
+With MinimumShouldMatch it's possible to set one or more conditions for how many terms (in percentage and absolutes) should match.
 If you specify 2<60% all terms up to 2 terms will be required to match. More than 2 terms 60% of the terms are required to match.
 
 Note!
