@@ -1,8 +1,14 @@
 # EPiServer.Labs.Find.Toolbox
 
-Toolbox primarily offers a way around current limitations of the Find synonym implementation.
+Toolbox features
+* An improved synonym implementation 
+* MinimumShouldMatch 
+* MatchPhrase and MatchPrefixPhrase
+* FuzzyQuery and WildcardQuery 
 
-Toolbox solves limitations in the following scenarios:
+All can be used together or independently and depends on the .For() call for the original query
+
+Toolbox's improved synonym implementation solves limitations in the following scenarios:
 * Missing or unexplainable hits when using .WithAndAsDefaultOperator()
 * Multiple term synonyms
 * Multiple term synonyms bidirectional
@@ -12,30 +18,40 @@ Toolbox solves limitations in the following scenarios:
 * No unwanted built-in synonyms
 
 Currently the synonym expansion is done in backend (Elastic Search) and relies on a synonym index.
-This is solved by retrieving and caching the synonym list, and when the query comes in
-we expand the matching synonyms on the query, on the client side.
+We solve this by retrieving and caching the synonym list and when the query comes in we expand the matching synonyms on the query, on the client side.
 
-Searching for 'episerver find' where find is a synonym for 'search & navigation"
-will result in 'episerver (find OR (search & navigation))'
+Searching for 'episerver find' where find is a synonym for 'search & navigation" will result in 'episerver (find OR (search & navigation))'
+
+Note!
+* There will always be an OR relationship between the synonym match and the expanded synonym regardless if you use WithAndAsDefaultOperator() or MinimumShouldMatch().
+* There will always be an AND relationship between terms of the phrase in the synonym match and the expanded synonym regardless if you use OR.
 
 Toolbox also comes with support for Elastic Search's MinimumShouldMatch. 
 With MinimumShouldMatch it's possible to set or or more conditions for how many terms (in percentage and absolutes) should match.
 If you specify 2<60% all terms up to 2 terms will be required to match. More than 2 terms 60% of the terms are required to match.
+If you specify 2 all terms up to 2 terms will be required to match.
+This is prefered over using purely OR or AND where you will either get too many hits (OR) or no hits (AND).
 
-To improve relevance and search experience even further support for Elastic Search's MatchPhrash, MatchPrefixPhrase, FuzzyQuery and WildcardQuery has been added.
+To improve relevance and search experience even further support for Elastic Search's MatchPhrase, MatchPrefixPhrase, FuzzyQuery and WildcardQuery has been added.
 
 MatchPhrase and MatchPhrasePrefix boosts the relevance for exact phrase matches and phrase matches in the beginning of fields.
-FuzzyQuery finds terms even if the wording is not quite right. WildcardQuery find terms even if they are not completed or are part of another word. 
-The two latter are both restricted to terms longer than 2 characters. Wildcard are only added to the right. WildcardQuery and FuzzyQuery should be considered
-heavy and should only be used on few fields and only on fields with little content.
 
-* There will always be an OR relationship between the synonym match and the expanded synonym regardless if you use WithAndAsDefaultOperator() or MinimumShouldMatch().
-* There will always be an AND relationship between terms of the phrase in the synonym match and the expanded synonym regardless if you use OR.
+FuzzyQuery finds terms even if the wording is not quite right. WildcardQuery find terms even if they are not completed or are part of another word. 
+The two latter are only applies to terms longer than 2 characters. Wildcard is only added to the right. Wildcard matches gets a negative boost.
+
+Note!
+WildcardQuery and FuzzyQuery should be considered heavy for the backend and should only be used on few fields and only on fields with little content.
+
+
 
 [MinimumShouldMatch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html)
+
 [MatchPhrase documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase.html)
+
 [MatchQueryPhrase documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase-prefix.html)
+
 [FuzzyQuery documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-fuzzy-query.html)
+
 [WildcardQuery documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-wildcard-query.html)
 
 
