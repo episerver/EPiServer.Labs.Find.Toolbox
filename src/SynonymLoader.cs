@@ -24,11 +24,11 @@ namespace EPiServer.Find.Cms
 
         public Dictionary<String, HashSet<String>> GetSynonyms(TimeSpan? cacheDuration = null)
         {            
-            return GetSynonyms(100, new RuntimeCacheAdapter(), new StaticCachePolicy(cacheDuration == null ? DateTime.Now.AddHours(1) : DateTime.Now.Add((TimeSpan)cacheDuration)));
+            return GetSynonyms(100, new RuntimeCacheAdapter(), new StaticCachePolicy(cacheDuration == null ? DateTime.Now.AddHours(3) : DateTime.Now.Add((TimeSpan)cacheDuration)));
         }
 
         public Dictionary<String, HashSet<String>> GetSynonyms(int synonymBatchSize, RuntimeCacheAdapter cache, StaticCachePolicy staticCachePolicy)
-        {
+        {            
             var statisticLanguageTags = GetStatisticLanguageTags();
             string synonymCacheKey = GetSynonymCacheKey(statisticLanguageTags);
 

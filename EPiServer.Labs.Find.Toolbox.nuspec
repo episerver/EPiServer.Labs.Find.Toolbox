@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+    <metadata>
+        <id>EPiServer.Labs.Find.Toolbox</id>
+        <version>1.0.8</version>
+        <title>EPiServer Find Toolbox</title>
+        <authors>EPiServer AB</authors>
+        <owners>EPiServer</owners>
+        <licenseUrl>https://github.com/episerver/EPiServer.Labs.Find.Toolbox/blob/master/LICENSE/</licenseUrl>
+        <projectUrl>https://github.com/episerver/EPiServer.Labs.Find.Toolbox/</projectUrl>
+        <requireLicenseAcceptance>true</requireLicenseAcceptance>
+        <description>EPiserver Find Toolbox gives you improved synonyms, better relevance and an overall better search experience.</description>
+        <copyright>Copyright EPiServer AB 2020</copyright>
+        <tags>EPiServer Search</tags>
+        <dependencies>
+            <dependency id="EPiServer.Find.Cms" version="[12.0.0,14.0)" />
+        </dependencies>
+    </metadata>
+  <files>
+    <file src="..\EPiServer.Labs.Find.Toolbox\src\bin\release\EPiServer.Labs.Find.Toolbox.dll" target="lib\net461\" />
+  </files>
+</package>

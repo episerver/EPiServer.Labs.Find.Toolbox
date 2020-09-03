@@ -1,6 +1,7 @@
 ﻿using EPiServer.Find.Json;
 using Newtonsoft.Json;
 using System.Collections.Generic;
+using EPiServer.Find.Helpers;
 
 namespace EPiServer.Find.Api.Querying.Queries
 {
@@ -15,15 +16,101 @@ namespace EPiServer.Find.Api.Querying.Queries
         public string MinimumShouldMatch { get; set; }
     }
 
- 
+
     public class MinShouldMatchBoolQuery : BoolQuery
     {
-        public MinShouldMatchBoolQuery() : base() 
+        public MinShouldMatchBoolQuery() : base()
         {
         }
 
         [JsonProperty("minimum_should_match", NullValueHandling = NullValueHandling.Ignore)]
         public string MinimumShouldMatch { get; set; }
     }
-  
+
+    [JsonConverter(typeof(PhraseQueryConverter))]
+    public class PhraseQuery : BoostableQuery
+    {
+        public PhraseQuery(string field, string value)
+        {
+            //TODO: Validate args not null
+            Field = field;
+            Value = value;
+        }
+
+        [JsonIgnore]
+        public string Field { get; set; }
+
+        [JsonProperty("query")]
+        public string Value { get; set; }
+
+        [JsonProperty("slop")]
+        public int Slop { get { return 2; } }
+
+    }
+
+    public class PhraseQueryConverter : CustomWriteConverterBase<PrefixQuery>
+    {
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            if (value.IsNot<PhraseQuery>())
+            {
+                writer.WriteNull();
+                return;
+            }
+            var query = (PhraseQuery)value;
+
+            writer.WriteStartObject();
+            writer.WritePropertyName("match_phrase");
+            writer.WriteStartObject();
+            writer.WritePropertyName(query.Field);
+            writer.WriteStartObject();
+            WriteNonIgnoredProperties(writer, value, serializer);            
+            writer.WriteEndObject();
+            writer.WriteEndObject();
+            writer.WriteEndObject();
+        }
+    }
+
+    [JsonConverter(typeof(PhrasePrefixQueryConverter))]
+    public class PhrasePrefixQuery : BoostableQuery
+    {
+        public PhrasePrefixQuery(string field, string value)
+        {
+            //TODO: Validate args not null
+            Field = field;
+            Value = value;
+        }
+
+        [JsonIgnore]
+        public string Field { get; set; }
+
+        [JsonProperty("query")]
+        public string Value { get; set; }
+    }
+
+    public class PhrasePrefixQueryConverter : CustomWriteConverterBase<PrefixQuery>
+    {
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            if (value.IsNot<PhrasePrefixQuery>())
+            {
+                writer.WriteNull();
+                return;
+            }
+            var query = (PhrasePrefixQuery)value;
+            writer.WriteStartObject();
+            writer.WritePropertyName("match_phrase_prefix");
+            writer.WriteStartObject();
+            writer.WritePropertyName(query.Field);
+            writer.WriteStartObject();
+            WriteNonIgnoredProperties(writer, value, serializer);
+            writer.WriteEndObject();
+            writer.WriteEndObject();
+            writer.WriteEndObject();
+        }
+    }
+
 }
+
+       
+
