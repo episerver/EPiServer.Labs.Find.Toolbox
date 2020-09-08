@@ -194,6 +194,11 @@ namespace EPiServer.Find.Cms
 
                 var terms = string.Join(" ", query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).Where(x => x.Length > 2));
 
+                if (terms.IsNullOrEmpty())
+                {
+                    return;
+                }
+
                 foreach (var fieldSelector in fieldSelectors)
                 {
                     string fieldName = search.Client.Conventions
@@ -317,7 +322,11 @@ namespace EPiServer.Find.Cms
                     return;
                 }
 
-                var words = query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                var terms = query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                if (terms.Count == 0)
+                {
+                    return;
+                }
 
                 foreach (var fieldSelector in fieldSelectors)
                 {
@@ -325,11 +334,11 @@ namespace EPiServer.Find.Cms
                         .FieldNameConvention
                         .GetFieldNameForAnalyzed(fieldSelector);
 
-                    foreach (var word in words)
+                    foreach (var term in terms)
                     {
-                        if (word.Length > 2)
+                        if (term.Length > 2)
                         {
-                            var wildcardQuery = new WildcardQuery(fieldName, string.Format("{0}*", word))
+                            var wildcardQuery = new WildcardQuery(fieldName, string.Format("{0}*", term))
                             {
                                 Boost = 0.5
                             };
