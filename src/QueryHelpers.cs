@@ -54,6 +54,11 @@ namespace EPiServer.Find.Helpers
             return (currentQueryStringQuery.Query ?? string.Empty).ToString();
         }
 
+        public static string GetRawQueryString(MultiFieldQueryStringQuery currentQueryStringQuery)
+        {
+            return (currentQueryStringQuery.RawQuery ?? string.Empty).ToString();
+        }
+
     }
 
 }

@@ -87,7 +87,7 @@ namespace EPiServer.Find.Cms
                     newBoolQuery.Should.Add(currentQueryStringQuery);
                 }
 
-                var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
+                var query = QueryHelpers.GetRawQueryString(currentQueryStringQuery);
                 if (query.IsNullOrEmpty())
                 {
                     return;
@@ -138,7 +138,7 @@ namespace EPiServer.Find.Cms
                     newBoolQuery.Should.Add(currentQueryStringQuery);
                 }
 
-                var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
+                var query = QueryHelpers.GetRawQueryString(currentQueryStringQuery);
                 if (query.IsNullOrEmpty())
                 {
                     return;
@@ -178,7 +178,7 @@ namespace EPiServer.Find.Cms
                     newBoolQuery = currentBoolQuery;
                 }
                 else
-                {                
+                {
                     if (!QueryHelpers.TryGetMinShouldMatchQueryStringQuery(context.RequestBody.Query, search, out currentQueryStringQuery))
                     {
                         return;
@@ -186,13 +186,13 @@ namespace EPiServer.Find.Cms
                     newBoolQuery.Should.Add(currentQueryStringQuery);
                 }
 
-                var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
+                var query = QueryHelpers.GetRawQueryString(currentQueryStringQuery);
                 if (query.IsNullOrEmpty())
                 {
                     return;
                 }
 
-                var terms = string.Join(" ", query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).Where(x => x.Length > 2));           
+                var terms = string.Join(" ", query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).Where(x => x.Length > 2));
 
                 foreach (var fieldSelector in fieldSelectors)
                 {
@@ -204,7 +204,7 @@ namespace EPiServer.Find.Cms
                     {
                         Fields = new[] { fieldName },
                         DefaultOperator = currentQueryStringQuery.DefaultOperator,
-                        MinimumShouldMatch = currentQueryStringQuery.MinimumShouldMatch,                        
+                        MinimumShouldMatch = currentQueryStringQuery.MinimumShouldMatch,
                         Boost = 0.8
                     };
 
@@ -218,72 +218,72 @@ namespace EPiServer.Find.Cms
                 }
 
                 context.RequestBody.Query = newBoolQuery;
-             
+
             });
         }
 
-/*        public static IQueriedSearch<TSource, QueryStringQuery> FuzzyQuery<TSource>(this IQueriedSearch<TSource> search, params Expression<Func<TSource, string>>[] fieldSelectors)
-        {
-            return new Search<TSource, QueryStringQuery> (search, context =>
-            {
-                BoolQuery currentBoolQuery;
-                BoolQuery newBoolQuery = new BoolQuery();
-                MultiFieldQueryStringQuery currentQueryStringQuery;
-
-                if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, search, out currentBoolQuery))
+        /*        public static IQueriedSearch<TSource, QueryStringQuery> FuzzyQuery<TSource>(this IQueriedSearch<TSource> search, params Expression<Func<TSource, string>>[] fieldSelectors)
                 {
-                    if (!QueryHelpers.TryGetQueryStringQuery(currentBoolQuery.Should[0], search, out currentQueryStringQuery))
+                    return new Search<TSource, QueryStringQuery> (search, context =>
                     {
-                        return;
-                    }
-                    newBoolQuery = currentBoolQuery;
-                }
-                else
-                {
-                    if (!QueryHelpers.TryGetQueryStringQuery(context.RequestBody.Query, search, out currentQueryStringQuery))
-                    {
-                        return;
-                    }
-                    newBoolQuery.Should.Add(currentQueryStringQuery);
-                }
+                        BoolQuery currentBoolQuery;
+                        BoolQuery newBoolQuery = new BoolQuery();
+                        MultiFieldQueryStringQuery currentQueryStringQuery;
 
-                var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
-                if (query.IsNullOrEmpty())
-                {
-                    return;
-                }
-
-                var words = query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);                
-
-                foreach (var fieldSelector in fieldSelectors)
-                {
-                    string fieldName = search.Client.Conventions
-                        .FieldNameConvention
-                        .GetFieldNameForAnalyzed(fieldSelector);
-                    
-                    foreach (var word in words)
-                    {
-                        if (word.Length > 2)
+                        if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, search, out currentBoolQuery))
                         {
-                            var fuzzyQuery = new FuzzyQuery(fieldName, word)
+                            if (!QueryHelpers.TryGetQueryStringQuery(currentBoolQuery.Should[0], search, out currentQueryStringQuery))
                             {
-                                MinSimilarity = 2                                
-                            };
-
-                            newBoolQuery.Should.Add(fuzzyQuery);
+                                return;
+                            }
+                            newBoolQuery = currentBoolQuery;
                         }
-                    }
-                }
+                        else
+                        {
+                            if (!QueryHelpers.TryGetQueryStringQuery(context.RequestBody.Query, search, out currentQueryStringQuery))
+                            {
+                                return;
+                            }
+                            newBoolQuery.Should.Add(currentQueryStringQuery);
+                        }
+
+                        var query = QueryHelpers.GetRawQueryString(currentQueryStringQuery);
+                        if (query.IsNullOrEmpty())
+                        {
+                            return;
+                        }
+
+                        var words = query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);                
+
+                        foreach (var fieldSelector in fieldSelectors)
+                        {
+                            string fieldName = search.Client.Conventions
+                                .FieldNameConvention
+                                .GetFieldNameForAnalyzed(fieldSelector);
+
+                            foreach (var word in words)
+                            {
+                                if (word.Length > 2)
+                                {
+                                    var fuzzyQuery = new FuzzyQuery(fieldName, word)
+                                    {
+                                        MinSimilarity = 2                                
+                                    };
+
+                                    newBoolQuery.Should.Add(fuzzyQuery);
+                                }
+                            }
+                        }
 
 
-                if (newBoolQuery.Should.Count == 0)
-                {
-                    return;
-                }
+                        if (newBoolQuery.Should.Count == 0)
+                        {
+                            return;
+                        }
 
-                context.RequestBody.Query = newBoolQuery;
-            });
-        }*/
+                        context.RequestBody.Query = newBoolQuery;
+                    });
+                }*/
 
 
         public static IQueriedSearch<TSource, QueryStringQuery> WildcardMatch<TSource>(this IQueriedSearch<TSource> search, params Expression<Func<TSource, string>>[] fieldSelectors)
@@ -311,14 +311,14 @@ namespace EPiServer.Find.Cms
                     newBoolQuery.Should.Add(currentQueryStringQuery);
                 }
 
-                var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
+                var query = QueryHelpers.GetRawQueryString(currentQueryStringQuery);
                 if (query.IsNullOrEmpty())
                 {
                     return;
                 }
 
                 var words = query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
-                
+
                 foreach (var fieldSelector in fieldSelectors)
                 {
                     string fieldName = search.Client.Conventions
