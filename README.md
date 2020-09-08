@@ -31,20 +31,20 @@ With MinimumShouldMatch it's possible to set or or more conditions for how many 
 If you specify 2<60% all terms up to 2 terms will be required to match. More than 2 terms 60% of the terms are required to match.
 If you specify 2 all terms up to 2 terms will be required to match.
 This is prefered over using purely OR or AND where you will either get too many hits (OR) or no hits (AND).
+MinimumShouldMatch() has to be called before calling UsingImprovedSynonyms() to be utilized.
 
 To improve relevance and search experience even further support for Elastic Search's MatchPhrase, MatchPrefixPhrase, FuzzyQuery and WildcardQuery has been added.
 
-MatchPhrase and MatchPhrasePrefix boosts the relevance for exact phrase matches and phrase matches in the beginning of fields.
+PhraseBoost() and PhrasePrefixBoost() boosts the relevance for exact phrase matches and phrase matches in the beginning of fields.
 
-FuzzyQuery finds terms even if the wording is not quite right. WildcardQuery find terms even if they are not completed or are part of another word. 
+FuzzyMatch() finds terms even if the wording is not quite right. WildcardMatch() find terms even if they are not completed or are part of another word. 
 The two latter are only applies to terms longer than 2 characters. Wildcard is only added to the right. Wildcard matches gets a negative boost.
+
 
 Note!
 WildcardQuery and FuzzyQuery should be considered heavy for the backend and should only be used on few fields and only on fields with little content.
+FuzzyMatch() does not use a true FuzzyQuery but a QueryStringQuery with fuzzysupport which gives better relevance than multiple FuzzyQuery queries.
 
-
-
-[MinimumShouldMatch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html)
 
 [MatchPhrase documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase.html)
 
@@ -130,7 +130,18 @@ See also the general [Episerver system requirements](https://world.episerver.com
     ```
 
     ```csharp
-    // Without WithAndAsDefaultOperator() which is the default behaviour which sets the default operator to OR and everything else supported by this module
+    // Boosting matches for phrase searches overall and in beginning of fields
+    UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
+                                    .For(query)       
+                                    .MinimumShouldMatch("2")
+                                    .UsingSynonymsImproved()        
+                                    .PhraseBoost(2, x => x.SearchTitle)
+                                    .PhrasePrefixBoost(10, x => x.SearchTitle)
+                                    .GetResult();
+    ```
+
+    ```csharp
+    // Let clients do some typos and write half-words and still get some hits
     UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
                                     .For(query)       
                                     .MinimumShouldMatch("2")

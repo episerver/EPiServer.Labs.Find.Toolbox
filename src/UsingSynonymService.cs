@@ -102,8 +102,7 @@ namespace EPiServer.Find.Cms
                         // Expanded phrases only requires one term to match
                         if (expandedPhrases.Count() > 0)
                         {
-                            var expandedPhraseQuery = CreateQuery(string.Join(" ", expandedPhrases), currentQueryStringQuery, "1");
-                            expandedPhraseQuery.MinimumShouldMatch = "1";
+                            var expandedPhraseQuery = CreateQuery(string.Join(" ", expandedPhrases), currentQueryStringQuery, "1");                            
                             newBoolQuery.Should.Add(expandedPhraseQuery);
                         }
                                            
@@ -125,7 +124,7 @@ namespace EPiServer.Find.Cms
                 });
             }
             else
-            {
+            {                
                 Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "Your index does not support synonyms. Please contact support to have your account upgraded. Falling back to search without synonyms.") { IsError = false });
                 return new Search<TSource, QueryStringQuery>(search, context => { });
             }
@@ -150,7 +149,7 @@ namespace EPiServer.Find.Cms
             minShouldMatchQuery.DefaultField = currentQueryStringQuery.DefaultField;
             minShouldMatchQuery.Fields = currentQueryStringQuery.Fields;
 
-            minShouldMatchQuery.MinimumShouldMatch = minShouldMatch;
+            minShouldMatchQuery.MinimumShouldMatch = minShouldMatch.IsNotNullOrEmpty() ? minShouldMatch : "1";
             minShouldMatchQuery.DefaultOperator = BooleanOperator.Or;            
 
             return minShouldMatchQuery;

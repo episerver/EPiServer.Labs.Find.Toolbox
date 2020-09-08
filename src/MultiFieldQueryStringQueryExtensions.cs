@@ -1,11 +1,18 @@
-﻿using EPiServer.Find.Api.Querying.Queries;
+﻿using Castle.DynamicProxy.Generators.Emitters.SimpleAST;
+using EPiServer.Data.Dynamic.Linq;
+using EPiServer.Find.Api.Querying.Queries;
 using EPiServer.Find.Helpers;
 using EPiServer.Find.Helpers.Text;
+using EPiServer.Find.Json;
+using EPiServer.Find.Tracing;
 using EPiServer.ServiceLocation;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Data.Entity.ModelConfiguration.Conventions;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 
 namespace EPiServer.Find.Cms
 {
@@ -22,7 +29,7 @@ namespace EPiServer.Find.Cms
         public static IQueriedSearch<TSource, QueryStringQuery> UsingSynonymsImproved<TSource>(this IQueriedSearch<TSource> search, UsingSynonymService usingSynonymService, TimeSpan? cacheDuration = null)
         {
             return usingSynonymService.UsingSynonyms(search, cacheDuration);
-        }        
+        }
 
         public static IQueriedSearch<TSource, MinShouldMatchQueryStringQuery> MinimumShouldMatch<TSource>(this IQueriedSearch<TSource> search, string minMatch)
         {
@@ -60,6 +67,7 @@ namespace EPiServer.Find.Cms
             return new Search<TSource, QueryStringQuery>(search, context =>
             {
                 BoolQuery currentBoolQuery;
+                BoolQuery newBoolQuery = new BoolQuery();
                 MultiFieldQueryStringQuery currentQueryStringQuery;
 
                 if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, search, out currentBoolQuery))
@@ -68,6 +76,7 @@ namespace EPiServer.Find.Cms
                     {
                         return;
                     }
+                    newBoolQuery = currentBoolQuery;
                 }
                 else
                 {
@@ -76,7 +85,7 @@ namespace EPiServer.Find.Cms
                     {
                         return;
                     }
-                    currentBoolQuery.Should.Add(currentQueryStringQuery);
+                    newBoolQuery.Should.Add(currentQueryStringQuery);
                 }
 
                 var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
@@ -91,10 +100,15 @@ namespace EPiServer.Find.Cms
                     string fieldName = search.Client.Conventions.FieldNameConvention.GetFieldNameForLowercase(fieldSelector);
                     var phraseQuery = new PhraseQuery(fieldName, query);
                     phraseQuery.Boost = relativeImportance;
-                    currentBoolQuery.Should.Add(phraseQuery);
+                    newBoolQuery.Should.Add(phraseQuery);
                 }
 
-                context.RequestBody.Query = currentBoolQuery;
+                if (newBoolQuery.Should.Count == 0)
+                {
+                    return;
+                }
+
+                context.RequestBody.Query = newBoolQuery;
             });
         }
 
@@ -104,6 +118,7 @@ namespace EPiServer.Find.Cms
             return new Search<TSource, QueryStringQuery>(search, context =>
             {
                 BoolQuery currentBoolQuery;
+                BoolQuery newBoolQuery = new BoolQuery();
                 MultiFieldQueryStringQuery currentQueryStringQuery;
 
                 if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, search, out currentBoolQuery))
@@ -112,6 +127,7 @@ namespace EPiServer.Find.Cms
                     {
                         return;
                     }
+                    newBoolQuery = currentBoolQuery;
                 }
                 else
                 {
@@ -120,7 +136,7 @@ namespace EPiServer.Find.Cms
                     {
                         return;
                     }
-                    currentBoolQuery.Should.Add(currentQueryStringQuery);
+                    newBoolQuery.Should.Add(currentQueryStringQuery);
                 }
 
                 var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
@@ -134,37 +150,41 @@ namespace EPiServer.Find.Cms
                     string fieldName = search.Client.Conventions.FieldNameConvention.GetFieldNameForLowercase(fieldSelector);
                     var phraseQuery = new PhrasePrefixQuery(fieldName, query);
                     phraseQuery.Boost = relativeImportance;
-                    currentBoolQuery.Should.Add(phraseQuery);
+                    newBoolQuery.Should.Add(phraseQuery);
                 }
 
-                context.RequestBody.Query = currentBoolQuery;
+                if (newBoolQuery.Should.Count == 0)
+                {
+                    return;
+                }
+
+                context.RequestBody.Query = newBoolQuery;
             });
         }
 
-
-
         public static IQueriedSearch<TSource, QueryStringQuery> FuzzyMatch<TSource>(this IQueriedSearch<TSource> search, params Expression<Func<TSource, string>>[] fieldSelectors)
         {
-            return new Search<TSource, QueryStringQuery> (search, context =>
+            return new Search<TSource, QueryStringQuery>(search, context =>
             {
                 BoolQuery currentBoolQuery;
-                MultiFieldQueryStringQuery currentQueryStringQuery;
+                BoolQuery newBoolQuery = new BoolQuery();
+                MinShouldMatchQueryStringQuery currentQueryStringQuery;
 
                 if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, search, out currentBoolQuery))
                 {
-                    if (!QueryHelpers.TryGetQueryStringQuery(currentBoolQuery.Should[0], search, out currentQueryStringQuery))
+                    if (!QueryHelpers.TryGetMinShouldMatchQueryStringQuery(currentBoolQuery.Should[0], search, out currentQueryStringQuery))
                     {
                         return;
                     }
+                    newBoolQuery = currentBoolQuery;
                 }
                 else
-                {
-                    currentBoolQuery = new BoolQuery();
-                    if (!QueryHelpers.TryGetQueryStringQuery(context.RequestBody.Query, search, out currentQueryStringQuery))
+                {                
+                    if (!QueryHelpers.TryGetMinShouldMatchQueryStringQuery(context.RequestBody.Query, search, out currentQueryStringQuery))
                     {
                         return;
                     }
-                    currentBoolQuery.Should.Add(currentQueryStringQuery);
+                    newBoolQuery.Should.Add(currentQueryStringQuery);
                 }
 
                 var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
@@ -173,9 +193,68 @@ namespace EPiServer.Find.Cms
                     return;
                 }
 
-                var words = query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                var terms = string.Join(" ", query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).Where(x => x.Length > 2));           
 
-                var fuzzyQueries = new List<FuzzyQuery>();
+                foreach (var fieldSelector in fieldSelectors)
+                {
+                    string fieldName = search.Client.Conventions
+                    .FieldNameConvention
+                    .GetFieldNameForLowercase(fieldSelector);
+
+                    var fuzzyQueryStringQuery = new MinShouldMatchQueryStringQuery(string.Format("{0}~", terms))
+                    {
+                        Fields = new[] { fieldName },
+                        DefaultOperator = currentQueryStringQuery.DefaultOperator,
+                        MinimumShouldMatch = currentQueryStringQuery.MinimumShouldMatch,                        
+                        Boost = 0.8
+                    };
+
+                    newBoolQuery.Should.Add(fuzzyQueryStringQuery);
+
+                }
+
+                if (newBoolQuery.Should.Count == 0)
+                {
+                    return;
+                }
+
+                context.RequestBody.Query = newBoolQuery;
+             
+            });
+        }
+
+/*        public static IQueriedSearch<TSource, QueryStringQuery> FuzzyQuery<TSource>(this IQueriedSearch<TSource> search, params Expression<Func<TSource, string>>[] fieldSelectors)
+        {
+            return new Search<TSource, QueryStringQuery> (search, context =>
+            {
+                BoolQuery currentBoolQuery;
+                BoolQuery newBoolQuery = new BoolQuery();
+                MultiFieldQueryStringQuery currentQueryStringQuery;
+
+                if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, search, out currentBoolQuery))
+                {
+                    if (!QueryHelpers.TryGetQueryStringQuery(currentBoolQuery.Should[0], search, out currentQueryStringQuery))
+                    {
+                        return;
+                    }
+                    newBoolQuery = currentBoolQuery;
+                }
+                else
+                {
+                    if (!QueryHelpers.TryGetQueryStringQuery(context.RequestBody.Query, search, out currentQueryStringQuery))
+                    {
+                        return;
+                    }
+                    newBoolQuery.Should.Add(currentQueryStringQuery);
+                }
+
+                var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
+                if (query.IsNullOrEmpty())
+                {
+                    return;
+                }
+
+                var words = query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries);                
 
                 foreach (var fieldSelector in fieldSelectors)
                 {
@@ -187,22 +266,25 @@ namespace EPiServer.Find.Cms
                     {
                         if (word.Length > 2)
                         {
-                            fuzzyQueries.Add(new FuzzyQuery(fieldName, word)
+                            var fuzzyQuery = new FuzzyQuery(fieldName, word)
                             {
                                 MinSimilarity = 2                                
-                            }); ;
+                            };
+
+                            newBoolQuery.Should.Add(fuzzyQuery);
                         }
                     }
                 }
 
-                foreach (var fuzzyQuery in fuzzyQueries)
+
+                if (newBoolQuery.Should.Count == 0)
                 {
-                    currentBoolQuery.Should.Add(fuzzyQuery);
+                    return;
                 }
 
-                context.RequestBody.Query = currentBoolQuery;
+                context.RequestBody.Query = newBoolQuery;
             });
-        }
+        }*/
 
 
         public static IQueriedSearch<TSource, QueryStringQuery> WildcardMatch<TSource>(this IQueriedSearch<TSource> search, params Expression<Func<TSource, string>>[] fieldSelectors)
@@ -210,6 +292,7 @@ namespace EPiServer.Find.Cms
             return new Search<TSource, QueryStringQuery>(search, context =>
             {
                 BoolQuery currentBoolQuery;
+                BoolQuery newBoolQuery = new BoolQuery();
                 MultiFieldQueryStringQuery currentQueryStringQuery;
 
                 if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, search, out currentBoolQuery))
@@ -218,15 +301,15 @@ namespace EPiServer.Find.Cms
                     {
                         return;
                     }
+                    newBoolQuery = currentBoolQuery;
                 }
                 else
                 {
-                    currentBoolQuery = new BoolQuery();
                     if (!QueryHelpers.TryGetQueryStringQuery(context.RequestBody.Query, search, out currentQueryStringQuery))
                     {
                         return;
                     }
-                    currentBoolQuery.Should.Add(currentQueryStringQuery);
+                    newBoolQuery.Should.Add(currentQueryStringQuery);
                 }
 
                 var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
@@ -235,10 +318,8 @@ namespace EPiServer.Find.Cms
                     return;
                 }
 
-                var words = query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries). ToList();
-
-                var wildcardQueries = new List<WildcardQuery>();
-
+                var words = query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                
                 foreach (var fieldSelector in fieldSelectors)
                 {
                     string fieldName = search.Client.Conventions
@@ -249,20 +330,21 @@ namespace EPiServer.Find.Cms
                     {
                         if (word.Length > 2)
                         {
-                            wildcardQueries.Add(new WildcardQuery(fieldName, string.Format("{0}*", word))
+                            var wildcardQuery = new WildcardQuery(fieldName, string.Format("{0}*", word))
                             {
                                 Boost = 0.5
-                            });;
+                            };
+                            newBoolQuery.Should.Add(wildcardQuery);
                         }
                     }
                 }
 
-                foreach (var wildcardQuery in wildcardQueries)
+                if (newBoolQuery.Should.Count == 0)
                 {
-                    currentBoolQuery.Should.Add(wildcardQuery);
+                    return;
                 }
 
-                context.RequestBody.Query = currentBoolQuery;
+                context.RequestBody.Query = newBoolQuery;
             });
         }
 
