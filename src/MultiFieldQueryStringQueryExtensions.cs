@@ -9,7 +9,6 @@ using EPiServer.ServiceLocation;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Data.Entity.ModelConfiguration.Conventions;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
