@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
         <id>EPiServer.Labs.Find.Toolbox</id>
-        <version>1.0.9</version>
+        <version>1.0.10</version>
         <title>EPiServer Find Toolbox</title>
         <authors>EPiServer AB</authors>
         <owners>EPiServer</owners>

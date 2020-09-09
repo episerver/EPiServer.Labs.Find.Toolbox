@@ -68,13 +68,13 @@ namespace EPiServer.Find.Cms
 
                         var synonymDictionary = _synonymLoader.GetSynonyms(cacheDuration);
 
-                        var queryPhrases = GetQueryPhrases(query).Except(new string[] { "AND", "OR" }).Take(50).ToArray();     // Collect all phrases in user query. Max 50 phrases. Skip AND/OR.                     
+                        var queryPhrases = QueryHelpers.GetQueryPhrases(query).ToArray();                   
                         if (queryPhrases.Count() == 0)
                         {
                             return;
                         }
 
-                        var phraseVariations = GetPhraseVariations(queryPhrases);                                   // 'Alloy tech now' would result in Alloy, 'Alloy tech', 'Alloy tech now', tech, 'tech now' and now
+                        var phraseVariations = GetPhraseVariations(queryPhrases);                                   // 'Alloy tech now' would result in Alloy, 'Alloy tech', 'Alloy tech now', tech, 'tech now' and now                        
                         var phrasesToExpand = GetPhrasesToExpand(phraseVariations, synonymDictionary);              // Return all phrases with expanded synonyms                        
                         var nonExpandedPhrases = GetPhrasesNotToExpand(queryPhrases, phrasesToExpand);              // Return all phrases that didn't get expanded
                         var expandedPhrases = ExpandPhrases(phrasesToExpand, synonymDictionary);                    // Expand phrases                                                        
@@ -132,7 +132,7 @@ namespace EPiServer.Find.Cms
 
         private static MinShouldMatchQueryStringQuery CreateQuery(string phrase, MultiFieldQueryStringQuery currentQueryStringQuery, string minShouldMatch)
         {
-            string phrasesQuery = EscapeElasticSearchQuery(phrase);
+            string phrasesQuery = QueryHelpers.EscapeElasticSearchQuery(phrase);
             var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(phrasesQuery);
 
             minShouldMatchQuery.RawQuery = currentQueryStringQuery.RawQuery;
@@ -153,16 +153,6 @@ namespace EPiServer.Find.Cms
             minShouldMatchQuery.DefaultOperator = BooleanOperator.Or;            
 
             return minShouldMatchQuery;
-        }
-
-        // Return all terms and phrases in query
-        private static string[] GetQueryPhrases(string query)
-        {
-            // Replace double space, tabs with single whitespace and trim space on side
-            string cleanedQuery = Regex.Replace(UnescapeElasticSearchQuery(query), @"\s+", " ").Trim();            
-
-            // Match single terms and quoted terms, allow hyphens and ´'` in terms, allow space between quotes and word.
-            return Regex.Matches(cleanedQuery, @"([\w-]+)|([""][\s\w-´'`]+[""])").Cast<Match>().Select(c => c.Value.Trim()).ToArray();
         }
 
         // Return all combinations of phrases in order
@@ -254,16 +244,6 @@ namespace EPiServer.Find.Cms
         private static bool ContainsMultipleTerms(string text)
         {
             return (text.Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries).Count() > 1);
-        }
-
-        private static string UnescapeElasticSearchQuery(string s)
-        {
-            return s.Replace("\\", "");
-        }
-
-        private static string EscapeElasticSearchQuery(string s)
-        {
-            return s.Replace("-", "\\-");
         }
 
     }

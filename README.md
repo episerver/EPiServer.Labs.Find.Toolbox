@@ -35,7 +35,8 @@ MinimumShouldMatch() has to be called before calling UsingImprovedSynonyms() to 
 
 To improve relevance and search experience even further support for Elastic Search's MatchPhrase, MatchPrefixPhrase, FuzzyQuery and WildcardQuery has been added.
 
-PhraseBoost() and PhrasePrefixBoost() boosts the relevance for exact phrase matches and phrase matches in the beginning of fields.
+PhraseBoost() and PhrasePrefixBoost() boosts the relevance for exact phrase matches and phrase matches in the beginning of fields. PrefixBoost() is the same as
+PhrasePrefixBoost() but for single terms.
 
 FuzzyMatch() finds terms even if the wording is not quite right. WildcardMatch() find terms even if they are not completed or are part of another word. 
 The two latter are only applies to terms longer than 2 characters. Wildcard is only added to the right. Wildcard matches gets a negative boost.
@@ -148,6 +149,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .UsingSynonymsImproved()        
                                     .PhraseBoost(2, x => x.SearchTitle)
                                     .PhrasePrefixBoost(10, x => x.SearchTitle)
+                                    .PrefixBoost(5, x => x.SearchTitle)
                                     .FuzzyMatch(x => x.SearchTitle)
                                     .WildcardMatch(x => x.SearchTitle)
                                     .GetResult();
