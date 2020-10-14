@@ -9,7 +9,7 @@ What you get
 All can be used together or independently and depends on the .For() call which spawns the original queryStringQuery.
 
 
-## .UsingImprovedSynonyms()
+## .UsingSynonymsImproved()
 The improved synonym implementation solves limitations in the following scenarios:
 * Missing or unexplainable hits when using .WithAndAsDefaultOperator()
 * Multiple term synonyms
