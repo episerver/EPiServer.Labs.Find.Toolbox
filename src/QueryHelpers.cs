@@ -13,8 +13,12 @@ namespace EPiServer.Find
         // Return all terms and phrases in query
         public static string[] GetQueryPhrases(string query)
         {
+
+            // Replace any occurence of ¤, with a whitespace, which is used as term seperator for built-in .UsingSynonyms() as this will otherwise make MatchPhrase, MatchPhrasePrefix not match
+            string cleanedQuery = UnescapeElasticSearchQuery(query).Replace("¤", " ");
+
             // Replace double space, tabs with single whitespace and trim space on side
-            string cleanedQuery = Regex.Replace(UnescapeElasticSearchQuery(query), @"\s+", " ").Trim();
+            cleanedQuery = Regex.Replace(cleanedQuery, @"\s+", " ").Trim();
 
             // Match single terms and quoted terms, allow hyphens and ´'` in terms, allow space between quotes and word.
             return Regex.Matches(cleanedQuery, @"([\w-]+)|([""][\s\w-´'`]+[""])").Cast<Match>().Select(c => c.Value.Trim()).Except(new string[] { "AND", "OR" }).Take(50).ToArray();
@@ -30,7 +34,7 @@ namespace EPiServer.Find
             return s.Replace("-", "\\-");
         }
 
-        public static bool TryGetMinShouldMatchQueryStringQuery<TSource>(IQuery query, IQueriedSearch<TSource> search, out MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery)
+        public static bool TryGetMinShouldMatchQueryStringQuery(IQuery query, out MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery)
         {
             currentMinShouldMatchQueryStringQuery = query as MinShouldMatchQueryStringQuery;
             if (currentMinShouldMatchQueryStringQuery == null)
@@ -41,7 +45,7 @@ namespace EPiServer.Find
             return true;
         }
 
-        public static bool TryGetBoolQuery<TSource>(IQuery query, IQueriedSearch<TSource> search, out BoolQuery currentBoolQuery)
+        public static bool TryGetBoolQuery(IQuery query, out BoolQuery currentBoolQuery)
         {
             currentBoolQuery = query as BoolQuery;
             if (currentBoolQuery == null)
@@ -80,7 +84,10 @@ namespace EPiServer.Find
         {
             return (currentQueryStringQuery.RawQuery ?? string.Empty).ToString();
         }
-
+        public static bool IsStringQuoted(string text)
+        {
+            return (text.StartsWith("\"") && text.EndsWith("\""));
+        }
     }
 
 }

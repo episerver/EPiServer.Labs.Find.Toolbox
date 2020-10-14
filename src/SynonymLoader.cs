@@ -23,12 +23,12 @@ namespace EPiServer.Find.Cms
         }
 
         public Dictionary<String, HashSet<String>> GetSynonyms(TimeSpan? cacheDuration = null)
-        {            
-            return GetSynonyms(100, new RuntimeCacheAdapter(), new StaticCachePolicy(cacheDuration == null ? DateTime.Now.AddHours(3) : DateTime.Now.Add((TimeSpan)cacheDuration)));
+        {
+            return GetSynonyms(100, new RuntimeCacheAdapter(), new StaticCachePolicy(cacheDuration == null ? DateTime.Now.AddHours(1) : DateTime.Now.Add((TimeSpan)cacheDuration)));
         }
 
         public Dictionary<String, HashSet<String>> GetSynonyms(int synonymBatchSize, RuntimeCacheAdapter cache, StaticCachePolicy staticCachePolicy)
-        {            
+        {
             var statisticLanguageTags = GetStatisticLanguageTags();
             string synonymCacheKey = GetSynonymCacheKey(statisticLanguageTags);
 
@@ -39,10 +39,10 @@ namespace EPiServer.Find.Cms
             }
 
             var loadedSynonyms = LoadSynonymsFromSourceIndex(synonymBatchSize, statisticLanguageTags);
-            var synonymsFlattened = CreateFlattenedSynonymDictionary(loadedSynonyms);
+            var synonymDictionary = CreateSynonymDictionary(loadedSynonyms);
 
-            cache.AddOrUpdate(synonymCacheKey, staticCachePolicy, synonymsFlattened);
-            return synonymsFlattened;
+            cache.AddOrUpdate(synonymCacheKey, staticCachePolicy, synonymDictionary);
+            return synonymDictionary;
         }
 
         /// <summary>
@@ -62,7 +62,6 @@ namespace EPiServer.Find.Cms
 
         private bool TryGetCachedSynonym(string synonymCacheKey, RuntimeCacheAdapter cache, out Dictionary<String, HashSet<String>> synonymsCached)
         {
-
             synonymsCached = cache.Get<Dictionary<String, HashSet<String>>>(synonymCacheKey);
             if (synonymsCached == null)
             {
@@ -106,20 +105,20 @@ namespace EPiServer.Find.Cms
         }
 
         /// <summary>
-        /// Here we flatten, simplifying the synonym list structure
+        /// Here we flatten and simplify the synonym list structure
         /// For every multiple phrase (terms separated by comma) we generate a new synonym pair
         /// For every birectional we generate a new synonym pair reversed
         /// For every multiple term we generate a new quoted variant
         /// </summary>
         /// <returns></returns>
-        private Dictionary<string, HashSet<string>> CreateFlattenedSynonymDictionary(IEnumerable<Synonym> loadedSynonyms)
+        private Dictionary<string, HashSet<string>> CreateSynonymDictionary(IEnumerable<Synonym> loadedSynonyms)
         {
             var synonymsFlattened = new Dictionary<string, HashSet<string>>();
             foreach (var synonym in loadedSynonyms)
             {
-                
+
                 var multiplePhrases = synonym.Phrase.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim());
-               
+
                 foreach (var singlePhrase in multiplePhrases)
                 {
                     AddSynonym(singlePhrase, synonym.SynonymPhrase, ref synonymsFlattened);
@@ -143,7 +142,7 @@ namespace EPiServer.Find.Cms
                     }
 
                 }
-           
+
             }
 
             return synonymsFlattened;
@@ -154,7 +153,7 @@ namespace EPiServer.Find.Cms
             HashSet<string> existingSynonym = null;
             if (synonyms.TryGetValue(phrase, out existingSynonym))
             {
-                existingSynonym.Add(synonym);
+                existingSynonym.Add(synonym.ToLowerInvariant());
                 synonyms[phrase] = existingSynonym;
             }
             else

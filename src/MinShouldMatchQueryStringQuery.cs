@@ -1,7 +1,6 @@
-﻿using EPiServer.Find.Json;
+﻿using EPiServer.Find.Helpers;
+using EPiServer.Find.Json;
 using Newtonsoft.Json;
-using System.Collections.Generic;
-using EPiServer.Find.Helpers;
 
 namespace EPiServer.Find.Api.Querying.Queries
 {
@@ -14,8 +13,11 @@ namespace EPiServer.Find.Api.Querying.Queries
 
         [JsonProperty("minimum_should_match", NullValueHandling = NullValueHandling.Ignore)]
         public string MinimumShouldMatch { get; set; }
-    }
 
+        [JsonIgnore]
+        public string[] ExpandedQuery { get; set; }
+
+    }
 
     public class MinShouldMatchBoolQuery : BoolQuery
     {
@@ -25,6 +27,7 @@ namespace EPiServer.Find.Api.Querying.Queries
 
         [JsonProperty("minimum_should_match", NullValueHandling = NullValueHandling.Ignore)]
         public string MinimumShouldMatch { get; set; }
+
     }
 
     [JsonConverter(typeof(PhraseQueryConverter))]
@@ -64,7 +67,7 @@ namespace EPiServer.Find.Api.Querying.Queries
             writer.WriteStartObject();
             writer.WritePropertyName(query.Field);
             writer.WriteStartObject();
-            WriteNonIgnoredProperties(writer, value, serializer);            
+            WriteNonIgnoredProperties(writer, value, serializer);
             writer.WriteEndObject();
             writer.WriteEndObject();
             writer.WriteEndObject();
@@ -111,6 +114,3 @@ namespace EPiServer.Find.Api.Querying.Queries
     }
 
 }
-
-       
-
