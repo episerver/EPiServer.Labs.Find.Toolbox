@@ -107,7 +107,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .For(query)             
                                     .MinimumShouldMatch("2<60%")
                                     .UsingSynonymsImproved() 
-                                    .UsingRelevanceImproved()
+                                    .UsingRelevanceImproved(x => x.SearchTitle)
                                     .GetResult();
     ```
     
@@ -117,7 +117,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .For(query)             
                                     .MinimumShouldMatch("2")
                                     .UsingSynonymsImproved() 
-                                    .UsingRelevanceImproved()
+                                    .UsingRelevanceImproved(x => x.SearchTitle)
                                     .GetResult();
     ```
     
@@ -127,7 +127,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .For(query)             
                                     .WithAndAsDefaultOperator()
                                     .UsingSynonymsImproved()                                     
-                                    .UsingRelevanceImproved()
+                                    .UsingRelevanceImproved(x => x.SearchTitle)
                                     .GetResult();
     ```
 
@@ -136,7 +136,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
     UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
                                     .For(query)                 
                                     .UsingSynonymsImproved()                                         
-                                    .UsingRelevanceImproved()
+                                    .UsingRelevanceImproved(x => x.SearchTitle)
                                     .GetResult();
     ```
 
@@ -146,7 +146,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .For(query)       
                                     .MinimumShouldMatch("2")
                                     .UsingSynonymsImproved()      
-                                    .UsingRelevanceImproved()
+                                    .UsingRelevanceImproved(x => x.SearchTitle)
                                     .GetResult();
     ```
 
@@ -156,7 +156,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .For(query)       
                                     .MinimumShouldMatch("2")
                                     .UsingSynonymsImproved()
-                                    .UsingRelevanceImproved()
+                                    .UsingRelevanceImproved(x => x.SearchTitle)
                                     .FuzzyMatch(x => x.SearchTitle)
                                     .WildcardMatch(x => x.SearchTitle)
                                     .GetResult();
@@ -168,7 +168,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .For(query)       
                                     .MinimumShouldMatch("2")
                                     .UsingSynonymsImproved()      
-                                    .UsingRelevanceImproved()
+                                    .UsingRelevanceImproved(x => x.SearchTitle)
                                     .FuzzyMatch(x => x.SearchTitle)
                                     .WildcardMatch(x => x.SearchTitle)
                                     .GetResult();
