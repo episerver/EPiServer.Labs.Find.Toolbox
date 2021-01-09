@@ -99,7 +99,7 @@ namespace EPiServer.Find.Cms
                         // Create PrefixQuery for single term queries larger than 2 characters
                         if (terms.Count() == 1 && terms.First().Length > 2)
                         {
-                            var prefixQuery = new PrefixQuery(fieldNameLowercase, query.ToLower()) { Boost = 2 };
+                            var prefixQuery = new PrefixQuery(fieldNameLowercase, query.ToLower()) { Boost = 0.5 };
                             newBoolQuery.Should.Add(prefixQuery);
                         }
 
@@ -187,6 +187,7 @@ namespace EPiServer.Find.Cms
                     Fields = fieldNames,
                     DefaultOperator = currentQueryStringQuery.DefaultOperator,
                     MinimumShouldMatch = currentQueryStringQuery.MinimumShouldMatch,
+                    FuzzyPrefixLength = 3,                    
                     Boost = 0.4
                 };
 
@@ -240,7 +241,7 @@ namespace EPiServer.Find.Cms
                 string[] candidateTerms = terms.Where(x => x.Length > 2).Take(3).Select(x => string.Format("{0}{1}", x, "*")).ToArray();
                 if (candidateTerms.Count() == 0)
                 {
-                    return;
+                    return; 
                 }
 
                 List<string> fieldNames = new List<string>();
@@ -257,7 +258,7 @@ namespace EPiServer.Find.Cms
                 {
                     Fields = fieldNames,
                     DefaultOperator = currentQueryStringQuery.DefaultOperator,
-                    MinimumShouldMatch = currentQueryStringQuery.MinimumShouldMatch,
+                    MinimumShouldMatch = currentQueryStringQuery.MinimumShouldMatch,                    
                     Boost = 0.2
                 };
 

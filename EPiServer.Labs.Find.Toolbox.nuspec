@@ -2,16 +2,16 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
         <id>EPiServer.Labs.Find.Toolbox</id>
-        <version>1.1.0</version>
+        <version>1.1.1</version>
         <title>EPiServer Find Toolbox</title>
         <authors>EPiServer AB</authors>
         <owners>EPiServer</owners>
         <licenseUrl>https://github.com/episerver/EPiServer.Labs.Find.Toolbox/blob/master/LICENSE/</licenseUrl>
         <projectUrl>https://github.com/episerver/EPiServer.Labs.Find.Toolbox/</projectUrl>
         <requireLicenseAcceptance>true</requireLicenseAcceptance>
-        <description>EPiserver Find Toolbox gives you improved synonyms, better relevance and an overall better search experience.</description>
-        <copyright>Copyright EPiServer AB 2020</copyright>
-        <tags>EPiServer Search</tags>
+        <description>EPiserver Find Toolbox gives you improved synonyms and relevance, and an overall better search experience.</description>
+        <copyright>Copyright EPiServer AB 2021</copyright>
+        <tags>EPiServer Search &amp; Navigation</tags>
         <dependencies>
             <dependency id="EPiServer.Find.Cms" version="[12.0.0,14.0)" />
         </dependencies>

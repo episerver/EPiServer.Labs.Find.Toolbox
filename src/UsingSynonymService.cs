@@ -97,9 +97,10 @@ namespace EPiServer.Find.Cms
                                 minShouldMatchQuery.MinimumShouldMatch = "100%";
                             }
 
-                            // We save all variations of queries with synonym expansions and without to be picked up by
-                            // with match_phrase and match_phraze_prefix                            
-                            minShouldMatchQuery.ExpandedQuery = queriesForMatch.ToArray();
+                            // We save all variations of queries with and without synonym expansions
+                            // to be picked up by UsingImprovedRelevance()
+                            // Only allow for 3 queriesForMatch
+                            minShouldMatchQuery.ExpandedQuery = queriesForMatch.Take(3).ToArray();
                             newBoolQuery.Should.Add(minShouldMatchQuery);
                         }
 
@@ -233,7 +234,7 @@ namespace EPiServer.Find.Cms
             foreach (var synonym in synonyms)
             {
                 //Insert AND in between terms if not quoted. Quoted not yet allowed by the Find UI though.
-                if (!QueryHelpers.IsStringQuoted(synonym) && ContainsMultipleTerms(phrase))
+                if (!QueryHelpers.IsStringQuoted(synonym) && ContainsMultipleTerms(synonym))
                 {
                     expandedPhrases.Add(string.Format("({0})", synonym.Replace(" ", string.Format(" {0} ", "AND"))));
                 }
