@@ -1,5 +1,8 @@
 # EPiServer.Labs.Find.Toolbox
 
+Please note that this project is not officially supported by Episerver just like most EPiServer.Labs projects.
+Should be considered stable and is currently used in production environments.
+
 What you get
 * An improved synonym implementation 
 * An overall relevance improvement by utilising MatchPhrase,  MatchPhrasePrefix and MatchPrefix
