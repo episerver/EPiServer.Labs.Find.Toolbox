@@ -2,6 +2,8 @@
 using EPiServer.Find.Api.Querying.Queries;
 using EPiServer.Find.Helpers;
 using EPiServer.Find.Helpers.Text;
+using EPiServer.Find.Tracing;
+using EPiServer.Logging.Compatibility;
 using EPiServer.ServiceLocation;
 using System;
 using System.Collections.Generic;
@@ -9,11 +11,12 @@ using System.Linq;
 using System.Linq.Expressions;
 
 namespace EPiServer.Find.Cms
-{
+{    
 
     public static class MultiFieldQueryStringQueryExtensions
-    {
+    {        
         private static Lazy<UsingSynonymService> _lazyUsingSynonymService = new Lazy<UsingSynonymService>(() => ServiceLocator.Current.GetInstance<UsingSynonymService>());
+        private static ILog log = LogManager.GetLogger(typeof(SearchRequestExtensions));
 
         public static IQueriedSearch<TSource, QueryStringQuery> UsingSynonymsImproved<TSource>(this IQueriedSearch<TSource> search, TimeSpan? cacheDuration = null)
         {
@@ -51,6 +54,8 @@ namespace EPiServer.Find.Cms
                 }
                 query.MinimumShouldMatch = minMatch;
 
+
+                log.DebugFormat("Added MinimumShouldMatch to search");
                 context.RequestBody.Query = query;
             });
         }
@@ -59,35 +64,33 @@ namespace EPiServer.Find.Cms
         {
             return new Search<TSource, QueryStringQuery>(search, context =>
             {
-                BoolQuery currentBoolQuery;
                 BoolQuery newBoolQuery = new BoolQuery();
-                MinShouldMatchQueryStringQuery currentQueryStringQuery;
+                BoolQuery currentBoolQuery;
+                MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery;
+                
+                if (!QueryHelpers.GetFirstQueryStringQuery(context, out currentMinShouldMatchQueryStringQuery, out currentBoolQuery))
+                {                    
+                    Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of UsingRelevanceImproved() relies on a QueryStringQuery, i.e. with the use of the .For() -extensions.") { IsError = false });
+                    return;
+                }
 
-                if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, out currentBoolQuery))
+                // Keep the current bool query with current queries if it exists
+                if (currentBoolQuery.Should.Count > 0)
                 {
-                    if (!QueryHelpers.TryGetMinShouldMatchQueryStringQuery(currentBoolQuery.Should[0], out currentQueryStringQuery))
-                    {
-                        return;
-                    }
                     newBoolQuery = currentBoolQuery;
                 }
-                else
+                else // Or use the QueryStringQuery
                 {
-                    currentBoolQuery = new BoolQuery();
-                    if (!QueryHelpers.TryGetMinShouldMatchQueryStringQuery(context.RequestBody.Query, out currentQueryStringQuery))
-                    {
-                        return;
-                    }
-                    newBoolQuery.Should.Add(currentQueryStringQuery);
-                }
+                    newBoolQuery.Should.Add(currentMinShouldMatchQueryStringQuery);
+                }                
 
                 // If .UsingImprovedSynonyms has not been used there is no ExpandedQuery for us then we use the query
-                if (currentQueryStringQuery.ExpandedQuery.IsNull())
+                if (currentMinShouldMatchQueryStringQuery.ExpandedQuery.IsNull())
                 {
-                    currentQueryStringQuery.ExpandedQuery = new string[] { currentQueryStringQuery.Query.ToString().Replace("¤", " ") };
-                }
+                    currentMinShouldMatchQueryStringQuery.ExpandedQuery = new string[] { currentMinShouldMatchQueryStringQuery.RawQuery.ToString() };
+                }                
 
-                foreach (var query in currentQueryStringQuery.ExpandedQuery)
+                foreach (var query in currentMinShouldMatchQueryStringQuery.ExpandedQuery)
                 {
                     var terms = QueryHelpers.GetQueryPhrases(query);
 
@@ -116,11 +119,7 @@ namespace EPiServer.Find.Cms
 
                 }
 
-                if (newBoolQuery.Should.Count == 0)
-                {
-                    return;
-                }
-
+                log.DebugFormat("Added PhraseQuery and PhrasePrefixQuery to search");
                 context.RequestBody.Query = newBoolQuery;
             });
         }
@@ -129,28 +128,27 @@ namespace EPiServer.Find.Cms
         {
             return new Search<TSource, QueryStringQuery>(search, context =>
             {
-                BoolQuery currentBoolQuery;
                 BoolQuery newBoolQuery = new BoolQuery();
-                MinShouldMatchQueryStringQuery currentQueryStringQuery;
+                BoolQuery currentBoolQuery;
+                MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery;
+                
+                if (!QueryHelpers.GetFirstQueryStringQuery(context, out currentMinShouldMatchQueryStringQuery, out currentBoolQuery))
+                {                    
+                    Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of FuzzyMatch relies on QueryStringQuery, i.e. with the use of the .For() -extensions.") { IsError = false });
+                    return;
+                }
 
-                if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, out currentBoolQuery))
+                // Keep the current bool query with current queries if it exists
+                if (currentBoolQuery.Should.Count > 0)
                 {
-                    if (!QueryHelpers.TryGetMinShouldMatchQueryStringQuery(currentBoolQuery.Should[0], out currentQueryStringQuery))
-                    {
-                        return;
-                    }
                     newBoolQuery = currentBoolQuery;
                 }
-                else
+                else // Or use the QueryStringQuery
                 {
-                    if (!QueryHelpers.TryGetMinShouldMatchQueryStringQuery(context.RequestBody.Query, out currentQueryStringQuery))
-                    {
-                        return;
-                    }
-                    newBoolQuery.Should.Add(currentQueryStringQuery);
+                    newBoolQuery.Should.Add(currentMinShouldMatchQueryStringQuery);
                 }
 
-                var query = QueryHelpers.GetRawQueryString(currentQueryStringQuery);
+                var query = QueryHelpers.GetRawQueryString(currentMinShouldMatchQueryStringQuery);
                 if (query.IsNullOrEmpty())
                 {
                     return;
@@ -171,7 +169,6 @@ namespace EPiServer.Find.Cms
                     return;
                 }
 
-
                 List<string> fieldNames = new List<string>();
                 foreach (var fieldSelector in fieldSelectors)
                 {
@@ -185,13 +182,15 @@ namespace EPiServer.Find.Cms
                 var fuzzyQueryStringQuery = new MinShouldMatchQueryStringQuery(fuzzyQueryString)
                 {
                     Fields = fieldNames,
-                    DefaultOperator = currentQueryStringQuery.DefaultOperator,
-                    MinimumShouldMatch = currentQueryStringQuery.MinimumShouldMatch,
+                    DefaultOperator = currentMinShouldMatchQueryStringQuery.DefaultOperator,
+                    MinimumShouldMatch = currentMinShouldMatchQueryStringQuery.MinimumShouldMatch,
                     FuzzyPrefixLength = 3,                    
                     Boost = 0.4
                 };
-
+                
                 newBoolQuery.Should.Add(fuzzyQueryStringQuery);
+
+                log.DebugFormat("Added fuzzyMatch {0} to search", fuzzyQueryString);
 
                 context.RequestBody.Query = newBoolQuery;
 
@@ -202,28 +201,28 @@ namespace EPiServer.Find.Cms
         {
             return new Search<TSource, QueryStringQuery>(search, context =>
             {
-                BoolQuery currentBoolQuery;
                 BoolQuery newBoolQuery = new BoolQuery();
-                MinShouldMatchQueryStringQuery currentQueryStringQuery;
+                BoolQuery currentBoolQuery;
+                MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery;
 
-                if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, out currentBoolQuery))
+                if (!QueryHelpers.GetFirstQueryStringQuery(context, out currentMinShouldMatchQueryStringQuery, out currentBoolQuery))
                 {
-                    if (!QueryHelpers.TryGetMinShouldMatchQueryStringQuery(currentBoolQuery.Should[0], out currentQueryStringQuery))
-                    {
-                        return;
-                    }
+                    // Synonyms are only supported for QueryStringQuery
+                    Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of synonyms are only supported för QueryStringQueries, i.e. with the use of the .For() -extensions. The query will be executed without the use of synonyms.") { IsError = false });
+                    return;
+                }
+
+                // Keep the current bool query with current queries if it exists
+                if (currentBoolQuery.Should.Count > 0)
+                {
                     newBoolQuery = currentBoolQuery;
                 }
-                else
+                else // Or use the QueryStringQuery
                 {
-                    if (!QueryHelpers.TryGetMinShouldMatchQueryStringQuery(context.RequestBody.Query, out currentQueryStringQuery))
-                    {
-                        return;
-                    }
-                    newBoolQuery.Should.Add(currentQueryStringQuery);
+                    newBoolQuery.Should.Add(currentMinShouldMatchQueryStringQuery);
                 }
 
-                var query = QueryHelpers.GetRawQueryString(currentQueryStringQuery);
+                var query = QueryHelpers.GetRawQueryString(currentMinShouldMatchQueryStringQuery);
                 if (query.IsNullOrEmpty())
                 {
                     return;
@@ -257,12 +256,14 @@ namespace EPiServer.Find.Cms
                 var wildcardQuery = new MinShouldMatchQueryStringQuery(wildcardQueryString)
                 {
                     Fields = fieldNames,
-                    DefaultOperator = currentQueryStringQuery.DefaultOperator,
-                    MinimumShouldMatch = currentQueryStringQuery.MinimumShouldMatch,                    
+                    DefaultOperator = currentMinShouldMatchQueryStringQuery.DefaultOperator,
+                    MinimumShouldMatch = currentMinShouldMatchQueryStringQuery.MinimumShouldMatch,                    
                     Boost = 0.2
                 };
-
+                
                 newBoolQuery.Should.Add(wildcardQuery);
+
+                log.DebugFormat("Added wildcard {0} to search", wildcardQueryString);
 
                 context.RequestBody.Query = newBoolQuery;
             });

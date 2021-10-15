@@ -165,17 +165,6 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .GetResult();
     ```
 
-     ```csharp 
-    // Let clients do some typos and write half-words
-    UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
-                                    .For(query)       
-                                    .MinimumShouldMatch("2")
-                                    .UsingSynonymsImproved()      
-                                    .UsingRelevanceImproved(x => x.SearchTitle)
-                                    .FuzzyMatch(x => x.SearchTitle)
-                                    .WildcardMatch(x => x.SearchTitle)
-                                    .GetResult();
-    ```
 
 7. Enjoy!
 

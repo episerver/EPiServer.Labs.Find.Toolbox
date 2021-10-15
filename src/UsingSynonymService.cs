@@ -3,6 +3,7 @@ using EPiServer.Find.Api.Querying.Queries;
 using EPiServer.Find.Helpers;
 using EPiServer.Find.Helpers.Text;
 using EPiServer.Find.Tracing;
+using EPiServer.Logging.Compatibility;
 using EPiServer.ServiceLocation;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,8 @@ namespace EPiServer.Find.Cms
     public class UsingSynonymService
     {
         private readonly SynonymLoader _synonymLoader;
+        private readonly int MAX_SYNONYM_LOOKUPS = 50;
+        private static ILog log = LogManager.GetLogger(typeof(SearchRequestExtensions));
 
         public UsingSynonymService(SynonymLoader synonymLoader)
         {
@@ -24,139 +27,116 @@ namespace EPiServer.Find.Cms
         public IQueriedSearch<TSource, QueryStringQuery> UsingSynonyms<TSource>(IQueriedSearch<TSource> search, TimeSpan? cacheDuration = null)
         {
 
-            if (search.Client.Settings.Admin)
+            if (!search.Client.Settings.Admin)
             {
-                return new Search<TSource, QueryStringQuery>(search, context =>
-                {
-                    if (context.RequestBody.Query != null)
-                    {
-
-                        BoolQuery newBoolQuery = new BoolQuery();
-                        BoolQuery currentBoolQuery;
-                        MultiFieldQueryStringQuery currentQueryStringQuery;
-
-                        if (QueryHelpers.TryGetBoolQuery(context.RequestBody.Query, out currentBoolQuery))
-                        {
-                            if (!QueryHelpers.TryGetQueryStringQuery(currentBoolQuery.Should[0], search, out currentQueryStringQuery))
-                            {
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            if (!QueryHelpers.TryGetQueryStringQuery(context.RequestBody.Query, search, out currentQueryStringQuery))
-                            {
-                                return;
-                            }
-                        }
-
-                        var query = QueryHelpers.GetQueryString(currentQueryStringQuery);
-                        if (query.IsNullOrEmpty())
-                        {
-                            return;
-                        }
-
-                        // If MinimumShouldMatch has been set previously pick up the minShouldMatch value
-                        MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery;
-                        string minShouldMatch = "";
-                        if (QueryHelpers.TryGetMinShouldMatchQueryStringQuery(currentQueryStringQuery, out currentMinShouldMatchQueryStringQuery))
-                        {
-                            minShouldMatch = currentMinShouldMatchQueryStringQuery.MinimumShouldMatch;
-                        }
-
-                        var synonymDictionary = _synonymLoader.GetSynonyms(cacheDuration);
-
-                        var queryPhrases = QueryHelpers.GetQueryPhrases(query).ToArray();
-                        if (queryPhrases.Count() == 0)
-                        {
-                            return;
-                        }
-
-                        HashSet<string> queriesForMatch;
-                        string queryNotExpanded = string.Join(" ", queryPhrases);
-                        string queryExpanded;
-
-                        if (!GetQueryExpanded(queryPhrases, synonymDictionary, out queryExpanded, out queriesForMatch))
-                        {
-                            return;
-                        }
-
-                        // Add non expanded query. Using the custom MinimumShouldMatch if set.
-                        if (queryNotExpanded.IsNotNullOrEmpty())
-                        {
-                            var minShouldMatchQuery = CreateQuery(queryNotExpanded, currentQueryStringQuery, "");
-
-                            // MinimumShouldMatch() overrides WithAndAsDefaultOperator()
-                            if (minShouldMatch.IsNotNullOrEmpty())
-                            {
-                                minShouldMatchQuery.MinimumShouldMatch = minShouldMatch;
-                            }
-                            // Emulate WithAndAsDefaultOperator() using MinimumShouldMatch set to 100%
-                            else if (currentQueryStringQuery.DefaultOperator == BooleanOperator.And)
-                            {
-                                minShouldMatchQuery.MinimumShouldMatch = "100%";
-                            }
-
-                            // We save all variations of queries with and without synonym expansions
-                            // to be picked up by UsingImprovedRelevance()
-                            // Only allow for 3 queriesForMatch
-                            minShouldMatchQuery.ExpandedQuery = queriesForMatch.Take(3).ToArray();
-                            newBoolQuery.Should.Add(minShouldMatchQuery);
-                        }
-
-                        // Add expanded query. MinimumShouldMatch is always 1 here. 
-                        if (queryExpanded.IsNotNullOrEmpty())
-                        {
-                            var minShouldMatchQuery = CreateQuery(queryExpanded, currentQueryStringQuery, "1");
-                            newBoolQuery.Should.Add(minShouldMatchQuery);
-                        }
-
-                        if (newBoolQuery.IsNull())
-                        {
-                            return;
-                        }
-
-                        // Keep all QueryStringQuery except the first Should generated by For()
-                        if (currentBoolQuery.IsNotNull())
-                        {
-                            foreach (var currentQuery in currentBoolQuery.Should.Skip(1))
-                            {
-                                newBoolQuery.Should.Add(currentQuery);
-                            }
-
-                            foreach (var currentQuery in currentBoolQuery.Must)
-                            {
-                                newBoolQuery.Must.Add(currentQuery);
-                            }
-
-                            foreach (var currentQuery in currentBoolQuery.MustNot)
-                            {
-                                newBoolQuery.MustNot.Add(currentQuery);
-                            }
-                        }
-
-                        context.RequestBody.Query = newBoolQuery;
-
-                    }
-                });
-            }
-            else
-            {
-                Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "Your index does not support synonyms. Please contact support to have your account upgraded. Falling back to search without synonyms.") { IsError = false });
+                Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "Your index lacks an admin index. Please contact support.") { IsError = false });
                 return new Search<TSource, QueryStringQuery>(search, context => { });
             }
-        }
 
-        private static MinShouldMatchQueryStringQuery CreateQuery(string phrase, MultiFieldQueryStringQuery currentQueryStringQuery, string minShouldMatch)
-        {
-            string phrasesQuery = QueryHelpers.EscapeElasticSearchQuery(phrase);
-            var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(phrasesQuery);
+            return new Search<TSource, QueryStringQuery>(search, context =>
+            {
+                if (context.RequestBody.Query != null)
+                {
+                    BoolQuery newBoolQuery = new BoolQuery();
+                    BoolQuery currentBoolQuery;
+                    MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery;
+
+                    if (!QueryHelpers.GetFirstQueryStringQuery(context, out currentMinShouldMatchQueryStringQuery, out currentBoolQuery))
+                    {
+                        // Synonyms are only supported for QueryStringQuery
+                        Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of synonyms are only supported for QueryStringQueries, i.e. with the use of the .For() -extensions. The query will be executed without the use of synonyms.") { IsError = false });
+                        return;
+                    }                  
+
+                    var query = QueryHelpers.GetRawQueryString(currentMinShouldMatchQueryStringQuery);
+                    if (query.IsNullOrEmpty())
+                    {
+                        return;
+                    }
+
+                    var synonymDictionary = _synonymLoader.GetSynonyms(cacheDuration);
+
+                    var queryPhrases = QueryHelpers.GetQueryPhrases(query).ToArray();
+                    if (queryPhrases.Count() == 0)
+                    {
+                        return;
+                    }
+                    
+                    if (!GetQueryExpanded(queryPhrases, synonymDictionary, out string queryNonExpanded, out string queryExpanded, out List<string> queriesForMatch))
+                    {
+                        return;
+                    }
+
+                    // Add non expanded query. Using the custom MinimumShouldMatch if set.
+                    if (queryNonExpanded.IsNotNullOrEmpty())
+                    {
+                        var minShouldMatchQuery = CreateMinShouldMatchQueryStringQuery(queryNonExpanded, true, "", currentMinShouldMatchQueryStringQuery);
+                            
+                        // MinimumShouldMatch() overrides WithAndAsDefaultOperator()
+                        if (currentMinShouldMatchQueryStringQuery.MinimumShouldMatch.IsNotNullOrEmpty())
+                        {
+                            minShouldMatchQuery.MinimumShouldMatch = currentMinShouldMatchQueryStringQuery.MinimumShouldMatch;
+                        }
+                        // Emulate WithAndAsDefaultOperator() using MinimumShouldMatch set to 100%
+                        else if (currentMinShouldMatchQueryStringQuery.DefaultOperator == BooleanOperator.And)
+                        {
+                            minShouldMatchQuery.MinimumShouldMatch = "100%";
+                        }
+
+                        // We save all variations of queries with and without synonym expansions
+                        // to be picked up by UsingImprovedRelevance()
+                        // Only allow for 3 queriesForMatch
+                        minShouldMatchQuery.ExpandedQuery = queriesForMatch.Take(3).ToArray();
+                        newBoolQuery.Should.Add(minShouldMatchQuery);
+                    }
+
+                    // Add expanded query. MinimumShouldMatch is always 1 here. 
+                    if (queryExpanded.IsNotNullOrEmpty())
+                    {
+                        var minShouldMatchQuery = CreateMinShouldMatchQueryStringQuery(queryExpanded, false, "1", currentMinShouldMatchQueryStringQuery);
+                        newBoolQuery.Should.Add(minShouldMatchQuery);
+                    }
+
+                    if (newBoolQuery.IsNull())
+                    {
+                        return;
+                    }
+
+                    // Keep all QueryStringQuery except the first Should generated by For()
+                    if (currentBoolQuery.IsNotNull())
+                    {
+                        foreach (var currentQuery in currentBoolQuery.Should.Skip(1))
+                        {
+                            newBoolQuery.Should.Add(currentQuery);
+                        }
+
+                        foreach (var currentQuery in currentBoolQuery.Must)
+                        {
+                            newBoolQuery.Must.Add(currentQuery);
+                        }
+
+                        foreach (var currentQuery in currentBoolQuery.MustNot)
+                        {
+                            newBoolQuery.MustNot.Add(currentQuery);
+                        }
+                    }
+
+                    log.DebugFormat("Added QueryStringQuery {0} and {1} for synonyms.", queryNonExpanded, queryExpanded);
+                    context.RequestBody.Query = newBoolQuery;
+
+                }
+            });
+        }        
+
+        private static MinShouldMatchQueryStringQuery CreateMinShouldMatchQueryStringQuery(string query, bool autoGeneratePhraseQueries, string minShouldMatch, MultiFieldQueryStringQuery currentQueryStringQuery)
+        {            
+            var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(QueryHelpers.EscapeElasticSearchQuery(query));
 
             minShouldMatchQuery.RawQuery = currentQueryStringQuery.RawQuery;
             minShouldMatchQuery.AllowLeadingWildcard = currentQueryStringQuery.AllowLeadingWildcard;
             minShouldMatchQuery.AnalyzeWildcard = currentQueryStringQuery.AnalyzeWildcard;
             minShouldMatchQuery.Analyzer = currentQueryStringQuery.Analyzer;
-            minShouldMatchQuery.AutoGeneratePhraseQueries = currentQueryStringQuery.AutoGeneratePhraseQueries;
+            minShouldMatchQuery.AutoGeneratePhraseQueries = autoGeneratePhraseQueries;
             minShouldMatchQuery.Boost = currentQueryStringQuery.Boost;
             minShouldMatchQuery.EnablePositionIncrements = currentQueryStringQuery.EnablePositionIncrements;
             minShouldMatchQuery.FuzzyMinSim = currentQueryStringQuery.FuzzyMinSim;
@@ -172,54 +152,63 @@ namespace EPiServer.Find.Cms
             return minShouldMatchQuery;
         }
 
-        // Get query expanded into queries for querystringquery and queries for match
+        // Get query non-expanded and expanded into queries to be used for for querystringquery and queries for match
         // Queries for querystringquery are a query without terms matching synonyms AND a query with only expanded synonyms
         // Queries for match are all expansion variations with the original query
-        private bool GetQueryExpanded(string[] terms, Dictionary<String, HashSet<String>> synonymDictionary, out string queryExpanded, out HashSet<string> queriesForMatch)
+        private bool GetQueryExpanded(string[] terms, Dictionary<String, HashSet<String>> synonymDictionary, out string queryNonExpanded, out string queryExpanded, out List<string> queriesForMatch)
         {
-            HashSet<string> expandedPhrases = new HashSet<string>();
-
-            queriesForMatch = new HashSet<string>();
+            
+            queriesForMatch = new List<string>();
             queryExpanded = "";
+            queryNonExpanded = string.Join(" ", terms);
+            queriesForMatch.Add(queryNonExpanded);
 
-            // Original query         
-            queriesForMatch.Add(string.Join(" ", terms));
-
-            // Bail out early if there are no synonyms
+            // Get out early if there are no synonyms
             if (synonymDictionary.Count == 0)
             {
                 return true;
             }
 
-            // Iterate all phrase variations, match synonyms, expand
+            // Create a copy of terms to edit when find synonyms matches
+            string[] nonExpandedTerms = (string[])terms.Clone();
+            // List to keep expanded terms
+            List<string> expandedTerms = new List<string>();
+
+            // Iterate all terms and phrase variations, match synonym and expand them                    
             for (var s = 0; s <= terms.Count(); s++)
             {
                 for (var c = 1; c <= terms.Count() - s; c++)
-                {
+                {                    
                     var phrase = string.Join(" ", terms.Skip(s).Take(c));
-
-                    HashSet<string> matchingSynonyms;
-                    if (synonymDictionary.TryGetValue(phrase.ToLowerInvariant(), out matchingSynonyms))
+                    
+                    if (MAX_SYNONYM_LOOKUPS >= s+c && synonymDictionary.TryGetValue(phrase.ToLowerInvariant(), out HashSet<string> matchingSynonyms))
                     {
+                        // Terms/Phrase with synonym expansions i.e. (7 OR Seven)
+                        expandedTerms.Add(ExpandPhrase(phrase, matchingSynonyms));
+
+                        // Terms/Phrase variations with synonym expansions
                         foreach (var synonym in matchingSynonyms)
-                        {
-                            // Query variations with synonym expansions
+                        {                            
                             queriesForMatch.Add(string.Format("{0} {1} {2}", string.Join(" ", terms.Take(s)), synonym, string.Join(" ", terms.Skip(s + c))).Trim());
                         }
 
-                        // Query with only synonym expansions i.e. (7 OR Seven)
-                        expandedPhrases.Add(ExpandPhrase(phrase, matchingSynonyms));
+                        //Remove terms that were expanded
+                        for (var x = s; s+c > x; x++)
+                            nonExpandedTerms[x] = string.Empty;
                     }
+                                   
                 }
+                            
             }
 
-            queryExpanded = string.Join(" ", expandedPhrases);
+            queryNonExpanded = string.Join(" ", nonExpandedTerms.Where(s => !string.IsNullOrEmpty(s)));
+            queryExpanded = string.Join(" ", expandedTerms);
 
             return true;
         }
-
-        // Return phrase expanded with matching synonym
-        // Searching for 'dagis' where 'dagis' is a synonym for 'förskola' and 'lekis'
+        
+        // Get query expanded for matching synonyms
+        // i.e. searching for 'dagis' where 'dagis' is a synonym for 'förskola' and 'lekis'
         // we will get the following expansion (dagis OR (förskola AND lekis))
         private static string ExpandPhrase(string phrase, HashSet<string> synonyms)
         {

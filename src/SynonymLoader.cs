@@ -3,6 +3,7 @@ using EPiServer.Find.Connection;
 using EPiServer.Find.Framework.Statistics;
 using EPiServer.Find.Optimizations;
 using EPiServer.Find.Optimizations.Synonyms.Api;
+using EPiServer.Logging.Compatibility;
 using EPiServer.ServiceLocation;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ namespace EPiServer.Find.Cms
     {
         private readonly IClient _client;
         private readonly IStatisticTagsHelper _statisticTagsHelper;
+        private static ILog log = LogManager.GetLogger(typeof(SearchRequestExtensions));
 
         public SynonymLoader(IClient client, IStatisticTagsHelper statisticTagsHelper)
         {
@@ -35,13 +37,15 @@ namespace EPiServer.Find.Cms
             Dictionary<String, HashSet<String>> synonymsCached;
             if (TryGetCachedSynonym(synonymCacheKey, cache, out synonymsCached))
             {
+                log.DebugFormat("Loaded {0} synonyms from cache (duration: {1}) for tags {2}", synonymsCached.Count, staticCachePolicy.ExpirationDate.ToString(), string.Join(",", statisticLanguageTags));
                 return synonymsCached;
             }
 
             var loadedSynonyms = LoadSynonymsFromSourceIndex(synonymBatchSize, statisticLanguageTags);
             var synonymDictionary = CreateSynonymDictionary(loadedSynonyms);
-
             cache.AddOrUpdate(synonymCacheKey, staticCachePolicy, synonymDictionary);
+
+            log.DebugFormat("Loaded {0} synonyms from index (duration: {1}) for tags {2}", loadedSynonyms.Count(), staticCachePolicy.ExpirationDate.ToString(), string.Join(",", statisticLanguageTags));
             return synonymDictionary;
         }
 
