@@ -11,10 +11,10 @@ using System.Linq;
 using System.Linq.Expressions;
 
 namespace EPiServer.Find.Cms
-{    
+{
 
     public static class MultiFieldQueryStringQueryExtensions
-    {        
+    {
         private static Lazy<UsingSynonymService> _lazyUsingSynonymService = new Lazy<UsingSynonymService>(() => ServiceLocator.Current.GetInstance<UsingSynonymService>());
         private static ILog log = LogManager.GetLogger(typeof(SearchRequestExtensions));
 
@@ -67,9 +67,9 @@ namespace EPiServer.Find.Cms
                 BoolQuery newBoolQuery = new BoolQuery();
                 BoolQuery currentBoolQuery;
                 MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery;
-                
+
                 if (!QueryHelpers.GetFirstQueryStringQuery(context, out currentMinShouldMatchQueryStringQuery, out currentBoolQuery))
-                {                    
+                {
                     Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of UsingRelevanceImproved() relies on a QueryStringQuery, i.e. with the use of the .For() -extensions.") { IsError = false });
                     return;
                 }
@@ -82,13 +82,13 @@ namespace EPiServer.Find.Cms
                 else // Or use the QueryStringQuery
                 {
                     newBoolQuery.Should.Add(currentMinShouldMatchQueryStringQuery);
-                }                
+                }
 
                 // If .UsingImprovedSynonyms has not been used there is no ExpandedQuery for us then we use the query
                 if (currentMinShouldMatchQueryStringQuery.ExpandedQuery.IsNull())
                 {
-                    currentMinShouldMatchQueryStringQuery.ExpandedQuery = new string[] { currentMinShouldMatchQueryStringQuery.RawQuery.ToString() };
-                }                
+                    currentMinShouldMatchQueryStringQuery.ExpandedQuery = new string[] { QueryHelpers.GetRawQueryString(currentMinShouldMatchQueryStringQuery) };
+                }
 
                 foreach (var query in currentMinShouldMatchQueryStringQuery.ExpandedQuery)
                 {
@@ -109,8 +109,8 @@ namespace EPiServer.Find.Cms
                         // Create PhraseQuery and PhrasePrefixQuery for multiple term queries                                              
                         if (terms.Count() > 1)
                         {
-                            var phraseQuery = new PhraseQuery(fieldNameAnalyzed, query) { Boost = 5 };
-                            var phrasePrefixQuery = new PhrasePrefixQuery(fieldNameLowercase, query.ToLower()) { Boost = 10 };
+                            var phraseQuery = new PhraseQuery(fieldNameAnalyzed, query) { Boost = 10 };
+                            var phrasePrefixQuery = new PhrasePrefixQuery(fieldNameLowercase, query.ToLower()) { Boost = 5 };
                             newBoolQuery.Should.Add(phraseQuery);
                             newBoolQuery.Should.Add(phrasePrefixQuery);
                         }
@@ -131,9 +131,9 @@ namespace EPiServer.Find.Cms
                 BoolQuery newBoolQuery = new BoolQuery();
                 BoolQuery currentBoolQuery;
                 MinShouldMatchQueryStringQuery currentMinShouldMatchQueryStringQuery;
-                
+
                 if (!QueryHelpers.GetFirstQueryStringQuery(context, out currentMinShouldMatchQueryStringQuery, out currentBoolQuery))
-                {                    
+                {
                     Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of FuzzyMatch relies on QueryStringQuery, i.e. with the use of the .For() -extensions.") { IsError = false });
                     return;
                 }
@@ -184,10 +184,10 @@ namespace EPiServer.Find.Cms
                     Fields = fieldNames,
                     DefaultOperator = currentMinShouldMatchQueryStringQuery.DefaultOperator,
                     MinimumShouldMatch = currentMinShouldMatchQueryStringQuery.MinimumShouldMatch,
-                    FuzzyPrefixLength = 3,                    
+                    FuzzyPrefixLength = 3,
                     Boost = 0.4
                 };
-                
+
                 newBoolQuery.Should.Add(fuzzyQueryStringQuery);
 
                 log.DebugFormat("Added fuzzyMatch {0} to search", fuzzyQueryString);
@@ -240,7 +240,7 @@ namespace EPiServer.Find.Cms
                 string[] candidateTerms = terms.Where(x => x.Length > 2).Take(3).Select(x => string.Format("{0}{1}", x, "*")).ToArray();
                 if (candidateTerms.Count() == 0)
                 {
-                    return; 
+                    return;
                 }
 
                 List<string> fieldNames = new List<string>();
@@ -257,10 +257,10 @@ namespace EPiServer.Find.Cms
                 {
                     Fields = fieldNames,
                     DefaultOperator = currentMinShouldMatchQueryStringQuery.DefaultOperator,
-                    MinimumShouldMatch = currentMinShouldMatchQueryStringQuery.MinimumShouldMatch,                    
+                    MinimumShouldMatch = currentMinShouldMatchQueryStringQuery.MinimumShouldMatch,
                     Boost = 0.2
                 };
-                
+
                 newBoolQuery.Should.Add(wildcardQuery);
 
                 log.DebugFormat("Added wildcard {0} to search", wildcardQueryString);

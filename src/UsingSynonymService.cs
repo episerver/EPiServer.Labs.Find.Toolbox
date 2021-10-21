@@ -7,7 +7,6 @@ using EPiServer.Logging.Compatibility;
 using EPiServer.ServiceLocation;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace EPiServer.Find.Cms
@@ -26,7 +25,6 @@ namespace EPiServer.Find.Cms
 
         public IQueriedSearch<TSource, QueryStringQuery> UsingSynonyms<TSource>(IQueriedSearch<TSource> search, TimeSpan? cacheDuration = null)
         {
-
             if (!search.Client.Settings.Admin)
             {
                 Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "Your index lacks an admin index. Please contact support.") { IsError = false });
@@ -46,7 +44,7 @@ namespace EPiServer.Find.Cms
                         // Synonyms are only supported for QueryStringQuery
                         Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of synonyms are only supported for QueryStringQueries, i.e. with the use of the .For() -extensions. The query will be executed without the use of synonyms.") { IsError = false });
                         return;
-                    }                  
+                    }
 
                     var query = QueryHelpers.GetRawQueryString(currentMinShouldMatchQueryStringQuery);
                     if (query.IsNullOrEmpty())
@@ -61,7 +59,7 @@ namespace EPiServer.Find.Cms
                     {
                         return;
                     }
-                    
+
                     if (!GetQueryExpanded(queryPhrases, synonymDictionary, out string queryNonExpanded, out string queryExpanded, out List<string> queriesForMatch))
                     {
                         return;
@@ -71,7 +69,7 @@ namespace EPiServer.Find.Cms
                     if (queryNonExpanded.IsNotNullOrEmpty())
                     {
                         var minShouldMatchQuery = CreateMinShouldMatchQueryStringQuery(queryNonExpanded, true, "", currentMinShouldMatchQueryStringQuery);
-                            
+
                         // MinimumShouldMatch() overrides WithAndAsDefaultOperator()
                         if (currentMinShouldMatchQueryStringQuery.MinimumShouldMatch.IsNotNullOrEmpty())
                         {
@@ -126,10 +124,10 @@ namespace EPiServer.Find.Cms
 
                 }
             });
-        }        
+        }
 
         private static MinShouldMatchQueryStringQuery CreateMinShouldMatchQueryStringQuery(string query, bool autoGeneratePhraseQueries, string minShouldMatch, MultiFieldQueryStringQuery currentQueryStringQuery)
-        {            
+        {
             var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(QueryHelpers.EscapeElasticSearchQuery(query));
 
             minShouldMatchQuery.RawQuery = currentQueryStringQuery.RawQuery;
@@ -157,7 +155,6 @@ namespace EPiServer.Find.Cms
         // Queries for match are all expansion variations with the original query
         private bool GetQueryExpanded(string[] terms, Dictionary<String, HashSet<String>> synonymDictionary, out string queryNonExpanded, out string queryExpanded, out List<string> queriesForMatch)
         {
-            
             queriesForMatch = new List<string>();
             queryExpanded = "";
             queryNonExpanded = string.Join(" ", terms);
@@ -178,27 +175,27 @@ namespace EPiServer.Find.Cms
             for (var s = 0; s <= terms.Count(); s++)
             {
                 for (var c = 1; c <= terms.Count() - s; c++)
-                {                    
+                {
                     var phrase = string.Join(" ", terms.Skip(s).Take(c));
-                    
-                    if (MAX_SYNONYM_LOOKUPS >= s+c && synonymDictionary.TryGetValue(phrase.ToLowerInvariant(), out HashSet<string> matchingSynonyms))
+
+                    if (MAX_SYNONYM_LOOKUPS >= s + c && synonymDictionary.TryGetValue(phrase.ToLowerInvariant(), out HashSet<string> matchingSynonyms))
                     {
                         // Terms/Phrase with synonym expansions i.e. (7 OR Seven)
                         expandedTerms.Add(ExpandPhrase(phrase, matchingSynonyms));
 
                         // Terms/Phrase variations with synonym expansions
                         foreach (var synonym in matchingSynonyms)
-                        {                            
+                        {
                             queriesForMatch.Add(string.Format("{0} {1} {2}", string.Join(" ", terms.Take(s)), synonym, string.Join(" ", terms.Skip(s + c))).Trim());
                         }
 
                         //Remove terms that were expanded
-                        for (var x = s; s+c > x; x++)
+                        for (var x = s; s + c > x; x++)
                             nonExpandedTerms[x] = string.Empty;
                     }
-                                   
+
                 }
-                            
+
             }
 
             queryNonExpanded = string.Join(" ", nonExpandedTerms.Where(s => !string.IsNullOrEmpty(s)));
@@ -206,7 +203,7 @@ namespace EPiServer.Find.Cms
 
             return true;
         }
-        
+
         // Get query expanded for matching synonyms
         // i.e. searching for 'dagis' where 'dagis' is a synonym for 'förskola' and 'lekis'
         // we will get the following expansion (dagis OR (förskola AND lekis))
