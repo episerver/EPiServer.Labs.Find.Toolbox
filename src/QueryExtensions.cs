@@ -14,6 +14,10 @@ namespace EPiServer.Find.Api.Querying.Queries
         [JsonProperty("minimum_should_match", NullValueHandling = NullValueHandling.Ignore)]
         public string MinimumShouldMatch { get; set; }
 
+        [JsonProperty("lenient", NullValueHandling = NullValueHandling.Ignore)]
+        public bool Lenient { get; set; } = true;
+
+
         [JsonIgnore]
         public string[] ExpandedQuery { get; set; }
 

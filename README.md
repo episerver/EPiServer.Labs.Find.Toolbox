@@ -8,6 +8,8 @@ What you get
 * An overall relevance improvement by utilising MatchPhrase,  MatchPhrasePrefix and MatchPrefix
 * Support for MinimumShouldMatch which improves search experience further
 * FuzzyMatch and WildcardMatch improving searches with typos and partial words
+* Three (pages, media and blocks) new CMS search providers that make use of all above to give you an improved search experience for the CMS UI
+* Set a custom request timeout for your search or multisearch 
 
 All can be used together or independently and depends on the .For() call which spawns the original queryStringQuery.
 
@@ -51,6 +53,18 @@ Note!
 WildcardQuery and FuzzyQuery should be considered heavy for the backend and should only be used on few fields and only on fields with little content.
 FuzzyMatch() does not use a true FuzzyQuery but a QueryStringQuery with fuzzysupport which gives better relevance than multiple FuzzyQuery queries.
 
+## CMS Search providers for pages, media and blocks
+All toolbox features added to three new CMS search providers that gives you
+overall improved search experience for your editors and administrators using the CMS UI.
+
+Follow this steps to enable the search providers
+1. Navigate to CMS Admin -> Config -> Search providers
+2. Check 'Find Toolbox - Pages', 'Find Toolbox - Media' and 'Find Toolbox - Blocks' and drag them to the top
+3. Disable Find pages, Find blocks, Find files
+
+## .SetTimeout()
+Finally, you are able to set a proper timeout for all your search requests.
+
 
 
 
@@ -76,8 +90,8 @@ FuzzyMatch() does not use a true FuzzyQuery but a QueryStringQuery with fuzzysup
 
 ## System requirements
 
-* Find 12 or higher
-* .NET Framework 4.6.1 or higher
+* Find 13 or higher
+* .NET Framework 4.6.2 or higher
 
 See also the general [Episerver system requirements](https://world.episerver.com/documentation/system-requirements/) on Episerver World.
 
@@ -162,6 +176,19 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .UsingRelevanceImproved(x => x.SearchTitle)
                                     .FuzzyMatch(x => x.SearchTitle)
                                     .WildcardMatch(x => x.SearchTitle)
+                                    .GetResult();
+    ```
+
+    ```csharp
+    // Set your request timeout to 10 seconds
+    UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
+                                    .For(query)       
+                                    .MinimumShouldMatch("2")
+                                    .UsingSynonymsImproved()
+                                    .UsingRelevanceImproved(x => x.SearchTitle)
+                                    .FuzzyMatch(x => x.SearchTitle)
+                                    .WildcardMatch(x => x.SearchTitle)
+				                    .SetTimeout(10000)
                                     .GetResult();
     ```
 

@@ -154,8 +154,7 @@ namespace EPiServer.Find.Cms
 
         private static void AddSynonym(string phrase, string synonym, ref Dictionary<string, HashSet<string>> synonyms)
         {
-            HashSet<string> existingSynonym = null;
-            if (synonyms.TryGetValue(phrase, out existingSynonym))
+            if (synonyms.TryGetValue(phrase, out HashSet<string> existingSynonym))
             {
                 existingSynonym.Add(synonym.ToLowerInvariant());
                 synonyms[phrase] = existingSynonym;
