@@ -305,7 +305,7 @@ namespace EPiServer.Find.Cms
             {
 
                 var nonLanguageField = search.Client.Conventions.FieldNameConvention.GetFieldNameForAnalyzed((Expression)fieldSelector);
-                var languageField = search.Client.Conventions.FieldNameConvention.GetFieldNameForSearch((Expression)fieldSelector, context.ContentLanguage);
+                var languageField = search.Client.Conventions.FieldNameConvention.GetFieldNameForSearch((Expression)fieldSelector, context.Language);
 
                 AddFieldToQueryStringQuery(context, nonLanguageField, relativeImportance);
                 AddFieldToQueryStringQuery(context, languageField, relativeImportance);
