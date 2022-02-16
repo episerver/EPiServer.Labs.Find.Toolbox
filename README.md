@@ -64,7 +64,7 @@ Follow this steps to enable the search providers
 
 ## .SetTimeout()
 Finally, you are able to set a proper timeout for all your search requests.
-
+Note! Currently not working with MultiSearch.
 
 
 
@@ -92,6 +92,8 @@ Finally, you are able to set a proper timeout for all your search requests.
 
 * Find 13 or higher
 * .NET Framework 4.6.2 or higher
+* MinimumShouldMatch() requires that you're using a Find V3 index. 
+  If you're unsure reach out to Optimizley support.
 
 See also the general [Episerver system requirements](https://world.episerver.com/documentation/system-requirements/) on Episerver World.
 
@@ -188,7 +190,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .UsingRelevanceImproved(x => x.SearchTitle)
                                     .FuzzyMatch(x => x.SearchTitle)
                                     .WildcardMatch(x => x.SearchTitle)
-				                    .SetTimeout(10000)
+                                    .SetTimeout(10000)
                                     .GetResult();
     ```
 
