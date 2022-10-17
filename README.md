@@ -194,6 +194,19 @@ See also the general [Episerver system requirements](https://world.episerver.com
                                     .GetResult();
     ```
 
+     ```csharp
+    // When testing set synonym cache duration to a few seconds
+    UnifiedSearchResults results = SearchClient.Instance.UnifiedSearch(Language.English)
+                                    .For(query)       
+                                    .MinimumShouldMatch("2")
+                                    .UsingSynonymsImproved(TimeSpan.FromSeconds(1))
+                                    .UsingRelevanceImproved(x => x.SearchTitle)
+                                    .FuzzyMatch(x => x.SearchTitle)
+                                    .WildcardMatch(x => x.SearchTitle)
+                                    .SetTimeout(10000)
+                                    .GetResult();
+    ```
 
-7. Enjoy!
+
+8. Enjoy!
 

@@ -53,19 +53,17 @@ namespace EPiServer.Find.Cms
 
                     var synonymDictionary = _synonymLoader.GetSynonyms(cacheDuration);
 
-                    var queryPhrases = QueryHelpers.GetQueryPhrases(query).ToArray();
+                    var queryPhrases = QueryHelpers.GetQueryPhrases(query);
                     if (queryPhrases.Count() == 0)
                     {
                         return;
                     }
 
-                    if (!GetQueryExpanded(queryPhrases, synonymDictionary, out string queryNonExpanded, out string queryExpanded, out List<string> queriesForMatch))
-                    {
-                        return;
-                    }
+                    string queryExpanded = GetQueryExpanded(queryPhrases, synonymDictionary,out List<string> queriesForMatch);
+                    
 
-                    // Add non expanded query. Using the custom MinimumShouldMatch if set.
-                    if (queryNonExpanded.IsNotNullOrEmpty())
+                    // Add expanded query. Using the custom MinimumShouldMatch if set.
+                    if (queryExpanded.IsNotNullOrEmpty())
                     {
                         // MinimumShouldMatch() overrides WithAndAsDefaultOperator()
                         string minShouldMatch = string.Empty;
@@ -82,21 +80,14 @@ namespace EPiServer.Find.Cms
                             }
                         }
 
-                        var minShouldMatchQuery = CreateMinShouldMatchQueryStringQuery(queryNonExpanded, minShouldMatch, true, currentQuery);
+                        var minShouldMatchQuery = CreateMinShouldMatchQueryStringQuery(queryExpanded, minShouldMatch, true, currentQuery);
 
                         // We save all variations of queries with and without synonym expansions
                         // to be picked up by UsingImprovedRelevance()
                         // Only allow for 3 queriesForMatch
                         minShouldMatchQuery.ExpandedQuery = queriesForMatch.Take(3).ToArray();
                         newBoolQuery.Should.Add(minShouldMatchQuery);
-                    }
-
-                    // Add expanded query. MinimumShouldMatch is always 1 here. 
-                    if (queryExpanded.IsNotNullOrEmpty())
-                    {
-                        var minShouldMatchQuery = CreateMinShouldMatchQueryStringQuery(queryExpanded, "1", false, currentQuery);
-                        newBoolQuery.Should.Add(minShouldMatchQuery);
-                    }
+                    }   
 
                     if (newBoolQuery.IsNull())
                     {
@@ -122,7 +113,7 @@ namespace EPiServer.Find.Cms
                         }
                     }
 
-                    log.DebugFormat("Added QueryStringQuery {0} and {1} for synonyms.", queryNonExpanded, queryExpanded);
+                    log.DebugFormat("Added QueryStringQuery {0}", queryExpanded);
                     context.RequestBody.Query = newBoolQuery;
 
                 }
@@ -131,7 +122,7 @@ namespace EPiServer.Find.Cms
 
         private static MinShouldMatchQueryStringQuery CreateMinShouldMatchQueryStringQuery(string query, string minShouldMatch, bool autoGeneratePhraseQueries, IQuery currentQuery)
         {
-            var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(QueryEscaping.Quote(query));
+            var minShouldMatchQuery = new MinShouldMatchQueryStringQuery(query);
             var queryStringQuery = (QueryStringQuery)currentQuery;
             
             minShouldMatchQuery.RawQuery = queryStringQuery.RawQuery;
@@ -162,55 +153,51 @@ namespace EPiServer.Find.Cms
             return minShouldMatchQuery;
         }
 
-        private bool GetQueryExpanded(string[] terms, Dictionary<String, HashSet<String>> synonymDictionary, out string queryNonExpanded, out string queryExpanded, out List<string> queriesForMatch)
+        private string GetQueryExpanded(string[] terms, Dictionary<String, HashSet<String>> synonymDictionary, out List<string> queriesForMatch)
         {
             queriesForMatch = new List<string>();
-            queryExpanded = string.Empty;
-            queryNonExpanded = string.Join(" ", terms);
+            string queryNonExpanded = QueryEscaping.Quote(string.Join(" ", terms));
             queriesForMatch.Add(queryNonExpanded);
 
             // Get out early if there are no synonyms
             if (synonymDictionary.Count == 0)
-            {
-                return true;
-            }
+            {                
+                return queryNonExpanded;
+            }                        
 
             // Create a copy of terms to edit when find synonyms matches
-            string[] nonExpandedTerms = (string[])terms.Clone();
-            // List to keep expanded terms
-            List<string> expandedTerms = new List<string>();
+            string[] queryExpanded = (string[])terms.Clone();
 
             // Iterate all terms and phrase variations, match synonym and expand them                    
-            for (var s = 0; s <= terms.Count(); s++)
-            {
+            for (var s = 0; s < terms.Count(); s++)
+            {                
                 for (var c = 1; c <= terms.Count() - s; c++)
                 {
                     var phrase = string.Join(" ", terms.Skip(s).Take(c));
 
                     if (MAX_SYNONYM_LOOKUPS >= s + c && synonymDictionary.TryGetValue(phrase.ToLowerInvariant(), out HashSet<string> matchingSynonyms))
                     {
-                        // Terms/Phrase with synonym expansions i.e. (7 OR Seven)
-                        expandedTerms.Add(ExpandPhrase(phrase, matchingSynonyms));
+                        // Remove expanded term/phrase
+                        for (var x = s; s + c > x; x++)
+                            queryExpanded[x] = string.Empty;
 
-                        // Terms/Phrase variations with synonym expansions
+                        // Expand terms/phrase with matching synonym
+                        queryExpanded[s] = ExpandPhrase(phrase, matchingSynonyms);
+
+                        // Add matching synonyms to queriesForMach to be used with MatchPrefix, MatchPhrasePrefix and MatchPhrase
                         foreach (var synonym in matchingSynonyms)
                         {
-                            queriesForMatch.Add(string.Format("{0} {1} {2}", string.Join(" ", terms.Take(s)), synonym, string.Join(" ", terms.Skip(s + c))).Trim());
+                            queriesForMatch.Add(string.Format("{0} {1} {2}", string.Join(" ", terms.Take(s)), QueryEscaping.Quote(synonym), string.Join(" ", terms.Skip(s + c))).Trim());
                         }
+                                              
+                    }        
+                    
+                }                                               
 
-                        //Remove terms that were expanded
-                        for (var x = s; s + c > x; x++)
-                            nonExpandedTerms[x] = string.Empty;
-                    }
+            }            
 
-                }
-
-            }
-
-            queryNonExpanded = string.Join(" ", nonExpandedTerms.Where(s => !string.IsNullOrEmpty(s)));
-            queryExpanded = string.Join(" ", expandedTerms);
-
-            return true;
+            return string.Join(" ", queryExpanded);
+            
         }
         
         private string ExpandPhrase(string phrase, HashSet<string> synonyms)
@@ -220,7 +207,7 @@ namespace EPiServer.Find.Cms
             //Insert AND in between terms if not quoted
             if (!QueryHelpers.IsStringQuoted(phrase) && ContainsMultipleTerms(phrase))
             {
-                phrase = string.Format("({0})", phrase.Replace(" ", string.Format(" {0} ", "AND")));
+                phrase = string.Format("({0})", QueryEscaping.Quote(phrase).Replace(" ", string.Format(" {0} ", "AND")));
             }
 
             foreach (var synonym in synonyms)
@@ -228,15 +215,15 @@ namespace EPiServer.Find.Cms
                 //Insert AND in between terms if not quoted. Quoted not yet allowed by the Find UI though.
                 if (!QueryHelpers.IsStringQuoted(synonym) && ContainsMultipleTerms(synonym))
                 {
-                    expandedPhrases.Add(string.Format("({0})", synonym.Replace(" ", string.Format(" {0} ", "AND"))));
+                    expandedPhrases.Add(string.Format("({0})", QueryEscaping.Quote(synonym).Replace(" ", string.Format(" {0} ", "AND"))));
                 }
                 else
                 {
-                    expandedPhrases.Add(synonym);
+                    expandedPhrases.Add(QueryEscaping.Quote(synonym));
                 }
             }
 
-            return string.Format("({0}) ({1})", phrase, string.Join(" OR ", expandedPhrases));
+            return string.Format("({0} {1})", phrase, string.Join(" OR ", expandedPhrases));
         }
 
         private static bool ContainsMultipleTerms(string text)

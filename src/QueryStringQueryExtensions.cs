@@ -121,8 +121,8 @@ namespace EPiServer.Find.Cms
                         // Create PhraseQuery and PhrasePrefixQuery for multiple term queries                                              
                         if (terms.Count() > 1)
                         {
-                            var phraseQuery = new PhraseQuery(fieldNameAnalyzed, termsString) { Boost = PHRASEPREFIXQUERY_DEFAULT_BOOST };
-                            var phrasePrefixQuery = new PhrasePrefixQuery(fieldNameLowercase, termsString.ToLower()) { Boost = PHRASEQUERY_DEFAULT_BOOST };
+                            var phraseQuery = new PhraseQuery(fieldNameAnalyzed, QueryEscaping.Quote(termsString)) { Boost = PHRASEPREFIXQUERY_DEFAULT_BOOST };
+                            var phrasePrefixQuery = new PhrasePrefixQuery(fieldNameLowercase, QueryEscaping.Quote(termsString.ToLower())) { Boost = PHRASEQUERY_DEFAULT_BOOST };
                             newBoolQuery.Should.Add(phraseQuery);
                             newBoolQuery.Should.Add(phrasePrefixQuery);
                         }
@@ -182,7 +182,7 @@ namespace EPiServer.Find.Cms
                 // Only take terms > 2 chars and take max 3 of these
                 string[] candidateTerms = terms.Where(x => x.Length > 2 && x.Length <= 16)
                                                .Take(3)
-                                               .Select(x => string.Format("{0}{1}", x, "~")).ToArray();
+                                               .Select(x => string.Format("{0}{1}", QueryEscaping.Quote(x), "~")).ToArray();
 
                 if (candidateTerms.Count() == 0)
                 {
@@ -261,7 +261,7 @@ namespace EPiServer.Find.Cms
                 // Limit term size and term count
                 string[] candidateTerms = terms.Where(x => x.Length > 2 && x.Length <= 16)
                                                .Take(3)
-                                               .Select(x => doubleSided ? string.Format("*{0}*", x) : string.Format("{0}*", x))
+                                               .Select(x => doubleSided ? string.Format("*{0}*", QueryEscaping.Quote(x)) : string.Format("{0}*", x))
                                                .ToArray();
 
                 if (candidateTerms.Count() == 0)

@@ -12,11 +12,13 @@ namespace EPiServer.Find
                 
         public static string[] GetQueryPhrases(string query)
         {
-            // Replace double space, tabs with single whitespace and trim space on side
-            string cleanedQuery = SpaceTabsRegex.Replace(query, " ").Trim();
+            string[] AndOrNotOperators = new string[] { "AND", "OR", "NOT" };
 
+            // Replace double space, tabs with single whitespace and trim space on side
+            string cleanedQuery = SpaceTabsRegex.Replace(query, " ").Trim();            
+            
             // Match single terms and quoted terms, allow -&´'` in terms, allow ., in numerics, allow space between quotes and word.
-            return TermsAndQuotedTermsRegex.Matches(cleanedQuery).Cast<Match>().Select(c => c.Value.Trim()).Except(new string[] { "AND", "OR", "NOT" }).Take(50).ToArray();
+            return TermsAndQuotedTermsRegex.Matches(cleanedQuery).Cast<Match>().Select(c => c.Value.Trim()).Where(x => !AndOrNotOperators.Contains(x)).Take(50).ToArray();
         }
 
         public static bool GetFirstQueryStringQuery(ISearchContext context, out IQuery query, out BoolQuery boolQuery)
