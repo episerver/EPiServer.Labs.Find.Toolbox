@@ -1,8 +1,10 @@
-﻿using EPiServer.Find.Helpers;
+﻿using EPiServer.Find.Api.Querying;
+using EPiServer.Find.Api.Querying.Queries;
+using EPiServer.Find.Helpers;
 using EPiServer.Find.Json;
 using Newtonsoft.Json;
 
-namespace EPiServer.Find.Api.Querying.Queries
+namespace EPiServer.Labs.Find.Toolbox
 {
     public class MinShouldMatchQueryStringQuery : MultiFieldQueryStringQuery
     {
@@ -17,9 +19,8 @@ namespace EPiServer.Find.Api.Querying.Queries
         [JsonProperty("lenient", NullValueHandling = NullValueHandling.Ignore)]
         public bool Lenient { get; set; } = true;
 
-
         [JsonIgnore]
-        public string[] ExpandedQuery { get; set; }
+        public string[] QueriesForMatch { get; set; }
 
     }
 

@@ -1,22 +1,24 @@
 ﻿using Castle.Core.Internal;
+using EPiServer.Find;
 using EPiServer.Find.Api.Querying;
 using EPiServer.Find.Api.Querying.Queries;
+using EPiServer.Find.Cms;
 using EPiServer.Find.Helpers;
 using EPiServer.Find.Helpers.Text;
 using EPiServer.Find.Tracing;
-using EPiServer.Logging.Compatibility;
+using EPiServer.Logging;
 using EPiServer.ServiceLocation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace EPiServer.Find.Cms
+namespace EPiServer.Labs.Find.Toolbox
 {
     public static class QueryStringQueryExtensions
     {
         private static Lazy<UsingSynonymService> _lazyUsingSynonymService = new Lazy<UsingSynonymService>(() => ServiceLocator.Current.GetInstance<UsingSynonymService>());
-        private static ILog log = LogManager.GetLogger(typeof(SearchRequestExtensions));
+        private static readonly ILogger log = LogManager.GetLogger(typeof(SearchRequestExtensions));
 
         private static double PREFIXQUERY_DEFAULT_BOOST = 0.5;
         private static double PHRASEPREFIXQUERY_DEFAULT_BOOST = 5;
@@ -26,7 +28,7 @@ namespace EPiServer.Find.Cms
 
         public static IQueriedSearch<TSource, QueryStringQuery> UsingSynonymsImproved<TSource>(this IQueriedSearch<TSource> search, TimeSpan? cacheDuration = null)
         {
-            return UsingSynonymsImproved(search, _lazyUsingSynonymService.Value, cacheDuration);
+            return search.UsingSynonymsImproved(_lazyUsingSynonymService.Value, cacheDuration);
         }
 
         public static IQueriedSearch<TSource, QueryStringQuery> UsingSynonymsImproved<TSource>(this IQueriedSearch<TSource> search, UsingSynonymService usingSynonymService, TimeSpan? cacheDuration = null)
@@ -58,9 +60,9 @@ namespace EPiServer.Find.Cms
                     query.Fields = multiFieldQuery.Fields;
                 }
                 query.MinimumShouldMatch = minMatch;
-                
+
                 context.RequestBody.Query = query;
-                log.DebugFormat("Added MinimumShouldMatch to search");
+                log.Debug("Added MinimumShouldMatch to search");
             });
         }
 
@@ -74,7 +76,7 @@ namespace EPiServer.Find.Cms
 
                 if (!QueryHelpers.GetFirstQueryStringQuery(context, out currentQuery, out currentBoolQuery))
                 {
-                    Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of UsingRelevanceImproved() relies on a QueryStringQuery, i.e. with the use of the .For() -extensions.") { IsError = false });
+                    Trace.Instance.Add(new TraceEvent(search, "The use of UsingRelevanceImproved() relies on a QueryStringQuery, i.e. with the use of the .For() -extensions.") { IsError = false });
                     return;
                 }
 
@@ -89,40 +91,40 @@ namespace EPiServer.Find.Cms
                 }
 
 
-                IEnumerable<string> expandedQuery = null;
+                IEnumerable<string> queriesForMatch = null;
 
-                // If .UsingImprovedSynonyms() was used we use ExpandedQuery instead of the Query
-                if ((currentQuery as MinShouldMatchQueryStringQuery).ExpandedQuery.IsNotNull())
+                // If .UsingImprovedSynonyms() was used we use queriesForMatch instead of the Query
+                if ((currentQuery as MinShouldMatchQueryStringQuery).QueriesForMatch.IsNotNull())
                 {
-                    expandedQuery = (currentQuery as MinShouldMatchQueryStringQuery).ExpandedQuery;
+                    queriesForMatch = (currentQuery as MinShouldMatchQueryStringQuery).QueriesForMatch;
                 }
-                else {
-                    expandedQuery = new string[] { QueryHelpers.GetRawQueryString(currentQuery) };
-                }
-
-
-                foreach (var query in expandedQuery)
+                else
                 {
-                    var terms = QueryHelpers.GetQueryPhrases(query).Take(10);
-                    var termsString = string.Join(" ", terms);
+                    queriesForMatch = new string[] { QueryHelpers.GetRawQueryString(currentQuery) };
+                }
+
+
+                foreach (var query in queriesForMatch)
+                {
+                    var terms = query.Split(" ");                    
 
                     foreach (var fieldSelector in fieldSelectors)
                     {
                         var fieldNameLowercase = search.Client.Conventions.FieldNameConvention.GetFieldNameForLowercase(fieldSelector);
-                        var fieldNameAnalyzed = search.Client.Conventions.FieldNameConvention.GetFieldNameForAnalyzed(fieldSelector);                        
+                        var fieldNameAnalyzed = search.Client.Conventions.FieldNameConvention.GetFieldNameForAnalyzed(fieldSelector);
 
-                        // Create PrefixQuery for single term queries larger than 2 characters
-                        if (terms.Count() == 1 && terms.First().Length > 2)
+                        // Create PrefixQuery for single term queries longer  than 1 character
+                        if (terms.Count() == 1 && terms.First().Length > 1)
                         {
-                            var prefixQuery = new PrefixQuery(fieldNameLowercase, termsString.ToLower()) { Boost = PREFIXQUERY_DEFAULT_BOOST };
+                            var prefixQuery = new PrefixQuery(fieldNameLowercase, query.ToLower().Quote()) { Boost = PREFIXQUERY_DEFAULT_BOOST };
                             newBoolQuery.Should.Add(prefixQuery);
                         }
 
-                        // Create PhraseQuery and PhrasePrefixQuery for multiple term queries                                              
-                        if (terms.Count() > 1)
+                        // Create PhraseQuery and PhrasePrefixQuery for multiple term queries where any term is longer than 1 character                                             
+                        if (terms.Count() > 1 && terms.Any(x => x.Length > 1))
                         {
-                            var phraseQuery = new PhraseQuery(fieldNameAnalyzed, QueryEscaping.Quote(termsString)) { Boost = PHRASEPREFIXQUERY_DEFAULT_BOOST };
-                            var phrasePrefixQuery = new PhrasePrefixQuery(fieldNameLowercase, QueryEscaping.Quote(termsString.ToLower())) { Boost = PHRASEQUERY_DEFAULT_BOOST };
+                            var phraseQuery = new PhraseQuery(fieldNameAnalyzed, query.Quote()) { Boost = PHRASEQUERY_DEFAULT_BOOST };
+                            var phrasePrefixQuery = new PhrasePrefixQuery(fieldNameLowercase, query.ToLower().Quote()) { Boost = PHRASEPREFIXQUERY_DEFAULT_BOOST };
                             newBoolQuery.Should.Add(phraseQuery);
                             newBoolQuery.Should.Add(phrasePrefixQuery);
                         }
@@ -131,14 +133,14 @@ namespace EPiServer.Find.Cms
 
                 }
 
-                log.DebugFormat("Added PrefixQuery, PhraseQuery and PhrasePrefixQuery to search");
+                log.Debug("Added PrefixQuery, PhraseQuery and PhrasePrefixQuery to search");
                 context.RequestBody.Query = newBoolQuery;
             });
         }
 
         public static IQueriedSearch<TSource, QueryStringQuery> FuzzyMatch<TSource>(this IQueriedSearch<TSource> search, params Expression<Func<TSource, string>>[] fieldSelectors)
         {
-            return FuzzyMatch<TSource>(search, FUZZY_DEFAULT_BOOST, fieldSelectors);
+            return search.FuzzyMatch(FUZZY_DEFAULT_BOOST, fieldSelectors);
         }
 
         public static IQueriedSearch<TSource, QueryStringQuery> FuzzyMatch<TSource>(this IQueriedSearch<TSource> search, double boost, params Expression<Func<TSource, string>>[] fieldSelectors)
@@ -151,7 +153,7 @@ namespace EPiServer.Find.Cms
 
                 if (!QueryHelpers.GetFirstQueryStringQuery(context, out currentQuery, out currentBoolQuery))
                 {
-                    Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of FuzzyMatch relies on QueryStringQuery, i.e. with the use of the .For() -extensions.") { IsError = false });
+                    Trace.Instance.Add(new TraceEvent(search, "The use of FuzzyMatch relies on QueryStringQuery, i.e. with the use of the .For() -extensions.") { IsError = false });
                     return;
                 }
 
@@ -182,7 +184,7 @@ namespace EPiServer.Find.Cms
                 // Only take terms > 2 chars and take max 3 of these
                 string[] candidateTerms = terms.Where(x => x.Length > 2 && x.Length <= 16)
                                                .Take(3)
-                                               .Select(x => string.Format("{0}{1}", QueryEscaping.Quote(x), "~")).ToArray();
+                                               .Select(x => string.Format("{0}{1}", x.Quote(), "~")).ToArray();
 
                 if (candidateTerms.Count() == 0)
                 {
@@ -203,20 +205,20 @@ namespace EPiServer.Find.Cms
                 {
                     Fields = fieldNames,
                     DefaultOperator = (currentQuery as QueryStringQuery).DefaultOperator,
-                    MinimumShouldMatch = (currentQuery is MinShouldMatchQueryStringQuery minShouldMatchQueryStringQuery) ? minShouldMatchQueryStringQuery.MinimumShouldMatch : "100%",
+                    MinimumShouldMatch = currentQuery is MinShouldMatchQueryStringQuery minShouldMatchQueryStringQuery ? minShouldMatchQueryStringQuery.MinimumShouldMatch : "100%",
                     FuzzyPrefixLength = 3,
                     Boost = boost
                 };
 
-                newBoolQuery.Should.Add(fuzzyQueryStringQuery);               
+                newBoolQuery.Should.Add(fuzzyQueryStringQuery);
                 context.RequestBody.Query = newBoolQuery;
-                log.DebugFormat("Added fuzzyMatch {0} to search", fuzzyQueryString);
+                log.Debug("Added fuzzyMatch {0} to search", fuzzyQueryString);
             });
         }
-        
+
         public static IQueriedSearch<TSource, QueryStringQuery> WildcardMatch<TSource>(this IQueriedSearch<TSource> search, params Expression<Func<TSource, string>>[] fieldSelectors)
-        {            
-            return WildcardMatch<TSource>(search, WILDCARD_DEFAULT_BOOST, doubleSided:false,  fieldSelectors);
+        {
+            return search.WildcardMatch(WILDCARD_DEFAULT_BOOST, doubleSided: false, fieldSelectors);
         }
 
         public static IQueriedSearch<TSource, QueryStringQuery> WildcardMatch<TSource>(this IQueriedSearch<TSource> search, double boost, bool doubleSided, params Expression<Func<TSource, string>>[] fieldSelectors)
@@ -230,7 +232,7 @@ namespace EPiServer.Find.Cms
                 if (!QueryHelpers.GetFirstQueryStringQuery(context, out currentQuery, out currentBoolQuery))
                 {
                     // Synonyms are only supported for QueryStringQuery
-                    Find.Tracing.Trace.Instance.Add(new TraceEvent(search, "The use of synonyms are only supported för QueryStringQueries, i.e. with the use of the .For() -extensions. The query will be executed without the use of synonyms.") { IsError = false });
+                    Trace.Instance.Add(new TraceEvent(search, "The use of synonyms are only supported för QueryStringQueries, i.e. with the use of the .For() -extensions. The query will be executed without the use of synonyms.") { IsError = false });
                     return;
                 }
 
@@ -261,7 +263,7 @@ namespace EPiServer.Find.Cms
                 // Limit term size and term count
                 string[] candidateTerms = terms.Where(x => x.Length > 2 && x.Length <= 16)
                                                .Take(3)
-                                               .Select(x => doubleSided ? string.Format("*{0}*", QueryEscaping.Quote(x)) : string.Format("{0}*", x))
+                                               .Select(x => doubleSided ? string.Format("*{0}*", x.Quote()) : string.Format("{0}*", x.Quote()))
                                                .ToArray();
 
                 if (candidateTerms.Count() == 0)
@@ -283,16 +285,16 @@ namespace EPiServer.Find.Cms
                 {
                     Fields = fieldNames,
                     DefaultOperator = (currentQuery as QueryStringQuery).DefaultOperator,
-                    MinimumShouldMatch = (currentQuery is MinShouldMatchQueryStringQuery minShouldMatchQueryStringQuery) ? minShouldMatchQueryStringQuery.MinimumShouldMatch : "100%",
+                    MinimumShouldMatch = currentQuery is MinShouldMatchQueryStringQuery minShouldMatchQueryStringQuery ? minShouldMatchQueryStringQuery.MinimumShouldMatch : "100%",
                     Boost = boost
                 };
 
-                newBoolQuery.Should.Add(wildcardQuery);                               
+                newBoolQuery.Should.Add(wildcardQuery);
                 context.RequestBody.Query = newBoolQuery;
-                log.DebugFormat("Added wildcard {0} to search", wildcardQueryString);
+                log.Debug("Added wildcard {0} to search", wildcardQueryString);
             });
         }
-        
+
         public static IQueriedSearch<TSource, QueryStringQuery> InFieldImproved<TSource, TExistingQuery>(
                 this IQueriedSearch<TSource, TExistingQuery> search,
                 Expression<Func<TSource, string>> fieldSelector,
@@ -303,9 +305,8 @@ namespace EPiServer.Find.Cms
 
             return new Search<TSource, QueryStringQuery>(search, context =>
             {
-
-                var nonLanguageField = search.Client.Conventions.FieldNameConvention.GetFieldNameForAnalyzed((Expression)fieldSelector);
-                var languageField = search.Client.Conventions.FieldNameConvention.GetFieldNameForSearch((Expression)fieldSelector, context.Language);
+                var nonLanguageField = search.Client.Conventions.FieldNameConvention.GetFieldNameForAnalyzed(fieldSelector);
+                var languageField = search.Client.Conventions.FieldNameConvention.GetFieldNameForSearch(fieldSelector, context.ContentLanguage);
 
                 AddFieldToQueryStringQuery(context, nonLanguageField, relativeImportance);
                 AddFieldToQueryStringQuery(context, languageField, relativeImportance);
@@ -341,7 +342,7 @@ namespace EPiServer.Find.Cms
             if (relativeImportance != null)
             {
                 var relativeImportanceString = relativeImportance.Value.ToString();
-                fieldNameToAdd = String.Format("{0}^{1}", fieldNameToAdd, relativeImportanceString);
+                fieldNameToAdd = string.Format("{0}^{1}", fieldNameToAdd, relativeImportanceString);
             }
 
             query.Fields.Add(fieldNameToAdd);

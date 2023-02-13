@@ -1,8 +1,14 @@
-﻿using EPiServer.Find.Api.Querying;
+﻿using EPiServer.Find;
+using EPiServer.Find.Cms;
+using EPiServer.Find.Api.Querying;
 using EPiServer.Find.Helpers;
+using EPiServer.Find.UnifiedSearch;
 using System.Collections.Generic;
+using System.Linq;
+using EPiServer.Find.Framework;
+using System;
 
-namespace EPiServer.Find
+namespace EPiServer.Labs.Find.Toolbox
 {
 
     public static class SearchExtensions
@@ -48,7 +54,7 @@ namespace EPiServer.Find
             multiSearch.Searches.Clear();
             foreach (var search in searches)
             {
-                multiSearch.Searches.Add(SetTimeout(search, durationInSeconds));
+                multiSearch.Searches.Add(search.SetTimeout(durationInSeconds));
             }
             return multiSearch;
         }
