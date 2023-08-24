@@ -10,8 +10,9 @@ Notes:
 - Licensing is the same as the original library, i.e. Apache-2.0.
 - For version history, refer to the [Releases](https://github.com/dariusz-wozniak/EPiServer.Labs.Find.Toolbox/releases).
 
+Original readme just below the line 👇
+
 ---
-_Original README:_
 
 # EPiServer.Labs.Find.Toolbox
 

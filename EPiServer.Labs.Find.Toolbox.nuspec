@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
-        <id>EPiServer.Labs.Find.Toolbox</id>
-        <version>2.0.1</version>
-        <title>EPiServer Find Toolbox</title>
-        <authors>Optimizely</authors>
-        <owners>Optimizely</owners>
-        <licenseUrl>https://github.com/episerver/EPiServer.Labs.Find.Toolbox/blob/master/LICENSE/</licenseUrl>
-        <projectUrl>https://github.com/episerver/EPiServer.Labs.Find.Toolbox/</projectUrl>
-        <requireLicenseAcceptance>true</requireLicenseAcceptance>
-        <description>EPiserver Find Toolbox gives you improved synonyms and relevance, and an overall better search experience.</description>
+        <id>dariusz-wozniak.EPiServer.Labs.Find.Toolbox</id>
+        <version>2.0.0</version>
+        <title>EPiServer Find Toolbox (fork)</title>
+        <authors>Optimizely, Dariusz Woźniak</authors>
+        <owners>Optimizely, Dariusz Woźniak</owners>
+        <licenseUrl>https://github.com/dariusz-wozniak/EPiServer.Labs.Find.Toolbox/blob/master/LICENSE</licenseUrl>
+        <projectUrl>https://github.com/dariusz-wozniak/EPiServer.Labs.Find.Toolbox/</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>🍴 Fork of the EPiServer.Labs.Find.Toolbox</description>
         <copyright>Copyright Optimizely 2023</copyright>
-        <tags>EPiServer Search &amp; Navigation</tags>
+        <tags>episerver find optimizely</tags>
         <dependencies>
             <dependency id="EPiServer.Find.Cms" version="[14.0.0,15.0)" />
         </dependencies>
