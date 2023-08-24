@@ -1,11 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29503.13
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EPiServer.Labs.Find.Toolbox", "src\EPiServer.Labs.Find.Toolbox.csproj", "{BB796EF0-A8AE-48AD-96D8-FEDA9344F0E9}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EPiServer.Labs.Find.Toolbox.CommerceSearchProvider", "CommerceSearchProvider\EPiServer.Labs.Find.Toolbox.CommerceSearchProvider\EPiServer.Labs.Find.Toolbox.CommerceSearchProvider.csproj", "{A5B9727B-75CE-40BE-AEA6-1D359099BC4E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +15,6 @@ Global
 		{BB796EF0-A8AE-48AD-96D8-FEDA9344F0E9}.Debug|Any CPU.Build.0 = Release|Any CPU
 		{BB796EF0-A8AE-48AD-96D8-FEDA9344F0E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BB796EF0-A8AE-48AD-96D8-FEDA9344F0E9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A5B9727B-75CE-40BE-AEA6-1D359099BC4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A5B9727B-75CE-40BE-AEA6-1D359099BC4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A5B9727B-75CE-40BE-AEA6-1D359099BC4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A5B9727B-75CE-40BE-AEA6-1D359099BC4E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

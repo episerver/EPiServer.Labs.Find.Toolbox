@@ -2,6 +2,8 @@
 using EPiServer.DataAbstraction;
 using EPiServer.Find;
 using EPiServer.Find.Api.Querying.Queries;
+using EPiServer.Find.Cms;
+using EPiServer.Find.Cms.SearchProviders;
 using EPiServer.Find.Framework;
 using EPiServer.Framework;
 using EPiServer.Framework.Localization;
@@ -10,29 +12,39 @@ using EPiServer.ServiceLocation;
 using EPiServer.Shell;
 using EPiServer.Shell.Search;
 using EPiServer.Web;
+using EPiServer.Web.Routing;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web.Caching;
 
-namespace EPiServer.Find.Cms.SearchProviders
+namespace EPiServer.Labs.Find.Toolbox.SearchProviders
 {
     [SearchProvider]
     public class ToolboxBlockSearchProvider : EnterpriseBlockSearchProvider
     {
         private readonly UIDescriptorRegistry _uiDescriptorRegistry;
+        private readonly IContentRepository _contentRepository;
         private const string AllowedTypes = "allowedTypes";
         private const string RestrictedTypes = "restrictedTypes";
+
 
         public override string Area => FindContentSearchProviderConstants.BlockArea;
         public override string Category => "Find Toolbox - Blocks";
 
         public ToolboxBlockSearchProvider(LocalizationService localizationService,
-                ISiteDefinitionResolver siteDefinitionResolver, IContentTypeRepository contentTypeRepository,
-                UIDescriptorRegistry uiDescriptorRegistry)
-                : base(localizationService, siteDefinitionResolver, contentTypeRepository, uiDescriptorRegistry)
+             ISiteDefinitionResolver siteDefinitionResolver,
+             IContentTypeRepository<BlockType> contentTypeRepository,
+             UIDescriptorRegistry uiDescriptorRegistry,
+             EditUrlResolver editUrlResolver,
+             ServiceAccessor<SiteDefinition> currentSiteDefinition,
+             IContentLanguageAccessor languageResolver,
+             IUrlResolver urlResolver,
+             ITemplateResolver templateResolver,
+             IContentRepository contentRepository)
+             : base(localizationService, siteDefinitionResolver, contentTypeRepository, uiDescriptorRegistry, editUrlResolver, currentSiteDefinition, languageResolver, urlResolver, templateResolver, contentRepository)
         {
+            _contentRepository = contentRepository;
             _uiDescriptorRegistry = uiDescriptorRegistry;
         }
 
@@ -59,34 +71,32 @@ namespace EPiServer.Find.Cms.SearchProviders
 
             var cacheSettings = ServiceLocator.Current.GetInstance<IContentCacheKeyCreator>();
 
-            using (var cacheDependancy = new CacheDependency(null, new[] { cacheSettings.RootKeyName }))
-            {
-                var contentLinksWithLanguage = searchQuery
-                    .Select(x =>
-                            new ContentInLanguageReference(
-                                new ContentReference(((IContent)x).ContentLink.ID,
-                                                     ((IContent)x).ContentLink.ProviderName),
-                                ((ILocalizable)x).Language.Name))
-                    .StaticallyCacheFor(TimeSpan.FromMinutes(1), cacheDependancy)
-                    .GetResult();
+            var contentLinksWithLanguage = searchQuery
+                .Select(x =>
+                        new ContentInLanguageReference(
+                            new ContentReference(((IContent)x).ContentLink.ID,
+                                                 ((IContent)x).ContentLink.ProviderName),
+                            ((ILocalizable)x).Language.Name))
+                .StaticallyCacheFor(TimeSpan.FromMinutes(10), null, cacheSettings.RootKeyName)
+                .GetResult();
 
-                BlockData content = null;
-                return contentLinksWithLanguage
-                    .Where(
-                        searchResult =>
-                        DataFactory.Instance.TryGet<BlockData>(searchResult.ContentLink,
-                                                               !String.IsNullOrEmpty(searchResult.Language)
-                                                                   ? new LanguageSelector(searchResult.Language)
-                                                                   : LanguageSelector.AutoDetect(true), out content))
-                    .Select(item => CreateSearchResult(content));
-            }
+            BlockData content = null;
+            return contentLinksWithLanguage
+                .Where(
+                    searchResult =>
+                    _contentRepository.TryGet(searchResult.ContentLink,
+                                                           !string.IsNullOrEmpty(searchResult.Language)
+                                                               ? new LanguageSelector(searchResult.Language)
+                                                               : LanguageSelector.AutoDetect(true), out content))
+                .Select(item => CreateSearchResult(content));
         }
 
-        private new ITypeSearch<IContentData> GetFieldQuery(string SearchQuery, int maxResults)
+
+        public new ITypeSearch<IContentData> GetFieldQuery(string SearchQuery, int maxResults)
         {
             var language = ResolveSupportedLanguageBasedOnPreferredCulture(SearchClient.Instance);
 
-            if (String.IsNullOrEmpty(SearchQuery))
+            if (string.IsNullOrEmpty(SearchQuery))
             {
                 SearchQuery = "*";
             }
@@ -94,12 +104,12 @@ namespace EPiServer.Find.Cms.SearchProviders
             var query = SearchClient.Instance.Search<IContentData>(language)
                 .For(SearchQuery)
                 .InField(x => ((IContent)x).Name, 10)
-                .InField(x => ((IContent)x).ContentTypeName(), 2)
-                .InField(x => x.SearchText());
+                .InField(x => ((IContent)x).ContentTypeName(), 1)
+                .InField(x => x.SearchText(), 0.5);
 
             if (int.TryParse(SearchQuery, out int parsedQuery))
             {
-                query = query.InField(x => ((IContent)x).ContentLink.ID, 10);
+                query = query.InField(x => ((IContent)x).ContentLink.ID, 20);
             }
 
             query = AddContentSpecificFields(query);
@@ -109,7 +119,7 @@ namespace EPiServer.Find.Cms.SearchProviders
                 .Take(maxResults).SetTimeout(10000);
         }
 
-        private IEnumerable<Type> GetContentTypesFromQuery(string parameter, Query query)
+        public IEnumerable<Type> GetContentTypesFromQuery(string parameter, Query query)
         {
             if (query.Parameters.ContainsKey(parameter))
             {
@@ -153,7 +163,7 @@ namespace EPiServer.Find.Cms.SearchProviders
                     .UsingSynonymsImproved()
                     .UsingRelevanceImproved(x => ((IContent)x).Name, x => x.SearchText(), x => ((IContent)x).ContentTypeName())
                     .WildcardMatch(x => ((IContent)x).Name, x => ((IContent)x).ContentTypeName())
-                    .FuzzyMatch(x => ((IContent)x).Name, x => ((IContent)x).ContentTypeName());                   
+                    .FuzzyMatch(x => ((IContent)x).Name, x => ((IContent)x).ContentTypeName());
 
             return query;
         }

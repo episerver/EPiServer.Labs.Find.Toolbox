@@ -1,17 +1,17 @@
 # EPiServer.Labs.Find.Toolbox
 
-Please note that this project is not officially supported by Episerver just like most EPiServer.Labs projects.
+Please note that this project is not officially supported by Optimizely just like most EPiServer.Labs projects.
 Should be considered stable and is currently used in production environments.
 
 What you get
 * An improved synonym implementation 
-* An overall relevance improvement by utilising MatchPhrase,  MatchPhrasePrefix and MatchPrefix
+* An overall relevance improvement by utilizing MatchPhrase,  MatchPhrasePrefix and MatchPrefix
 * Support for MinimumShouldMatch which improves search experience further
 * FuzzyMatch and WildcardMatch improving searches with typos and partial words
-* Three (pages, media and blocks) new CMS search providers that make use of all above to give you an improved search experience for the CMS UI
-* Set a custom request timeout for your search or multisearch 
+* Three (pages, media and blocks) new CMS search providers that utilize all of the above to provide an improved search experience for the CMS UI
+* Set a custom request timeout for your search
 
-All can be used together or independently and depends on the .For() call which spawns the original queryStringQuery.
+These features can be used together or independently and depend on the .For() call, which spawns the original queryStringQuery.
 
 
 ## .UsingSynonymsImproved()
@@ -64,7 +64,7 @@ Follow this steps to enable the search providers
 
 ## .SetTimeout()
 Finally, you are able to set a proper timeout for all your search requests.
-Note! Currently not working with MultiSearch.
+Note! MultiSearch not supported
 
 
 
@@ -90,18 +90,18 @@ Note! Currently not working with MultiSearch.
 
 ## System requirements
 
-* Find 13 or higher
-* .NET Framework 4.6.2 or higher
+* 1.x requires Find 13 / .NET Framework
+* 2.x requires Find 14 / .NET Core 6 or higher
 * MinimumShouldMatch() requires that you're using a Find V3 index. 
-  If you're unsure reach out to Optimizley support.
+  If you're unsure reach out to Optimizely support and they will be able to help you migrate your index.
 
-See also the general [Episerver system requirements](https://world.episerver.com/documentation/system-requirements/) on Episerver World.
+See also the general [Optimizely system requirements](https://world.episerver.com/documentation/system-requirements/) on Episerver World.
 
 ---
 
 ## Installation
 
-1. Copy all files into your project or install NuGet package
+1. Install NuGet package or copy all files into your project
 
 2. Make sure you use 
 
@@ -111,7 +111,7 @@ See also the general [Episerver system requirements](https://world.episerver.com
 3. Remove any use of .UsingSynonyms()
 
 4. Add .WithAndAsDefaultOperator if you want but we recommend .MinimumShouldMatch(). Not specifying either will allow for OR as the default operator.
-   Using MinimumShouldMatch() will preced any use of .WithAndAsDefaultOperator() or the default OR.
+   Using MinimumShouldMatch() will take precedence over any use of .WithAndAsDefaultOperator() or the default OR.
 
 5. Add .UsingSynonymsImproved([cacheDuration])
    The cache duration parameter defaults to 3 hours but could be set to something shorter during testing.
