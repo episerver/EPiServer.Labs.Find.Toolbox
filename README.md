@@ -1,3 +1,17 @@
+# 🍴 Forked EPiServer.Labs.Find.Toolbox information
+
+This is a fork of the [EPiServer.Labs.Find.Toolbox](https://github.com/episerver/EPiServer.Labs.Find.Toolbox) library.
+
+The purpose of the fork is to provide a Nuget.org package for the library along with possible version updates and improvements.
+
+Notes:
+- Versioning of the package might differ from the original library.
+  - The forked library version starts with 2.0.0 version to indicate support of .NET 6 and Find 14.
+- Licensing is the same as the original library, i.e. Apache-2.0.
+
+---
+_Original README:_
+
 # EPiServer.Labs.Find.Toolbox
 
 Please note that this project is not officially supported by Optimizely just like most EPiServer.Labs projects.
@@ -65,8 +79,6 @@ Follow this steps to enable the search providers
 ## .SetTimeout()
 Finally, you are able to set a proper timeout for all your search requests.
 Note! MultiSearch not supported
-
-
 
 [MatchPhrase documentation](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-query-phrase.html)
 
