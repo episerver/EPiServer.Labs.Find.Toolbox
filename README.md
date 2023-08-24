@@ -8,6 +8,7 @@ Notes:
 - Versioning of the package might differ from the original library.
   - The forked library version starts with 2.0.0 version to indicate support of .NET 6 and Find 14.
 - Licensing is the same as the original library, i.e. Apache-2.0.
+- For version history, refer to the [Releases](https://github.com/dariusz-wozniak/EPiServer.Labs.Find.Toolbox/releases).
 
 ---
 _Original README:_
