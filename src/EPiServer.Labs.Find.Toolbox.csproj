@@ -17,11 +17,7 @@
     <None Remove="modules\**" />
   </ItemGroup>
   <ItemGroup>
-    <AdditionalFiles Remove="C:\Users\Daniel\.nuget\packages\microsoft.dotnet.upgradeassistant.extensions.default.analyzers\0.4.355802\build\\WebTypeReplacements.typemap" />
-  </ItemGroup>
-  <ItemGroup>
     <None Remove="app.config" />
-    <None Remove="C:\Users\Daniel\.nuget\packages\episerver.find.cms\14.2.4\contentFiles\any\any\modules\_protected\Find\Find.zip" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Data.OracleClient" />
